@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UnMeet — What if you could buy back your time?</title>
+  <meta name="description" content="UnMeet measures the real cost of your meetings. Not another note-taker. A tool that tells you which meetings to kill.">
+  <style>
+    :root {
+      --bg: #090A0E;
+      --surface: #111318;
+      --border: #1E2028;
+      --text: #B0B3BD;
+      --text-dim: #5C5F6B;
+      --accent: #3B82F6;
+      --accent-glow: rgba(59,130,246,0.15);
+      --red: #EF4444;
+      --green: #10B981;
+      --amber: #F59E0B;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', sans-serif;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Hero ── */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 2rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(ellipse at center, rgba(59,130,246,0.03) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .logo {
+      font-size: 2.5rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      color: #fff;
+      margin-bottom: 0.5rem;
+    }
+    .logo span { color: var(--accent); }
+
+    .tagline {
+      font-size: 1.25rem;
+      color: var(--text-dim);
+      max-width: 480px;
+      margin-bottom: 3rem;
+    }
+
+    /* ── Stat ── */
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 2rem;
+      max-width: 640px;
+      margin-bottom: 4rem;
+    }
+
+    .stat {
+      text-align: center;
+    }
+    .stat-value {
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: #fff;
+      line-height: 1;
+      margin-bottom: 0.5rem;
+    }
+    .stat-label {
+      font-size: 0.85rem;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+    .stat-value.red { color: var(--red); }
+    .stat-value.amber { color: var(--amber); }
+
+    /* ── Waitlist ── */
+    .waitlist {
+      display: flex;
+      gap: 0.75rem;
+      max-width: 400px;
+      width: 100%;
+    }
+
+    .waitlist input {
+      flex: 1;
+      padding: 0.875rem 1.25rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: #fff;
+      font-size: 1rem;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .waitlist input:focus { border-color: var(--accent); }
+    .waitlist input::placeholder { color: var(--text-dim); }
+
+    .waitlist button {
+      padding: 0.875rem 1.5rem;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+      white-space: nowrap;
+    }
+    .waitlist button:hover { background: #2563EB; }
+    .waitlist button:active { transform: scale(0.97); }
+
+    .waitlist-success {
+      display: none;
+      color: var(--green);
+      font-size: 0.95rem;
+      margin-top: 1rem;
+    }
+
+    /* ── How it works ── */
+    .section {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 6rem 2rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .section-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: -0.02em;
+      margin-bottom: 2.5rem;
+    }
+
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 2rem;
+      counter-reset: step;
+    }
+
+    .step {
+      position: relative;
+      padding-left: 3rem;
+    }
+    .step::before {
+      counter-increment: step;
+      content: "0" counter(step);
+      position: absolute;
+      left: 0;
+      top: 0;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--accent);
+      font-variant-numeric: tabular-nums;
+    }
+    .step h3 {
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+    .step p {
+      color: var(--text-dim);
+      font-size: 0.9rem;
+    }
+
+    /* ── Comparison ── */
+    .compare {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+      margin-top: 1rem;
+    }
+
+    .compare-box {
+      padding: 1.5rem;
+      border-radius: 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+    }
+    .compare-box h4 {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 1rem;
+    }
+    .compare-box.them h4 { color: var(--red); }
+    .compare-box.us h4 { color: var(--green); }
+
+    .compare-box ul {
+      list-style: none;
+      font-size: 0.9rem;
+    }
+    .compare-box li {
+      padding: 0.4rem 0;
+      color: var(--text-dim);
+    }
+    .compare-box li::before { content: "— "; color: var(--text-dim); }
+
+    /* ── FAQ ── */
+    .faq-item {
+      margin-bottom: 1.5rem;
+    }
+    .faq-item h3 {
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+    .faq-item p {
+      color: var(--text-dim);
+      font-size: 0.9rem;
+    }
+
+    /* ── Footer ── */
+    .footer {
+      text-align: center;
+      padding: 3rem 2rem;
+      border-top: 1px solid var(--border);
+      color: var(--text-dim);
+      font-size: 0.85rem;
+    }
+
+    .footer a {
+      color: var(--text);
+      text-decoration: none;
+    }
+    .footer a:hover { color: var(--accent); }
+
+    /* ── Responsive ── */
+    @media (max-width: 640px) {
+      .stat-grid { grid-template-columns: 1fr; gap: 1.5rem; }
+      .steps { grid-template-columns: 1fr; }
+      .compare { grid-template-columns: 1fr; }
+      .waitlist { flex-direction: column; }
+      .logo { font-size: 2rem; }
+      .hero { padding: 3rem 1.5rem; min-height: auto; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── Hero ── -->
+  <section class="hero">
+    <div class="logo">Un<span>Meet</span></div>
+    <p class="tagline">What if you could <em>buy back</em> your time?<br>UnMeet measures the real cost of meetings — and tells you which ones to kill.</p>
+
+    <div class="stat-grid">
+      <div class="stat">
+        <div class="stat-value red">31%</div>
+        <div class="stat-label">of meetings are unnecessary</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value amber">$399B</div>
+        <div class="stat-label">global annual waste</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value">6.2h</div>
+        <div class="stat-label">reclaimed per week avg</div>
+      </div>
+    </div>
+
+    <form class="waitlist" id="waitlist-form">
+      <input type="email" id="email" placeholder="Your email address" required>
+      <button type="submit">Get early access</button>
+    </form>
+    <div class="waitlist-success" id="success">You're on the list. We'll be in touch.</div>
+  </section>
+
+  <!-- ── How it works ── -->
+  <section class="section">
+    <h2 class="section-title">How it works</h2>
+    <div class="steps">
+      <div class="step">
+        <h3>Install</h3>
+        <p>One-click Chrome extension. No account needed to start tracking.</p>
+      </div>
+      <div class="step">
+        <h3>Forget</h3>
+        <p>UnMeet quietly detects meetings across Zoom, Meet, Teams — zero input required.</p>
+      </div>
+      <div class="step">
+        <h3>Decide</h3>
+        <p>Weekly dashboard shows the cost. One-tap rating after each meeting. Data-backed decisions.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Comparison ── -->
+  <section class="section">
+    <h2 class="section-title">What UnMeet is <em>not</em></h2>
+    <div class="compare">
+      <div class="compare-box them">
+        <h4>Not another note-taker</h4>
+        <ul>
+          <li>We don't transcribe your meetings</li>
+          <li>We don't generate AI summaries</li>
+          <li>We don't integrate with your CRM</li>
+          <li>We don't sell meeting analytics to your boss</li>
+        </ul>
+      </div>
+      <div class="compare-box us">
+        <h4>We measure what matters</h4>
+        <ul>
+          <li>How many hours you spend in meetings</li>
+          <li>What those hours cost — in dollars</li>
+          <li>Which meetings are worth your time</li>
+          <li>Which ones you should never attend again</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── FAQ ── -->
+  <section class="section">
+    <h2 class="section-title">FAQ</h2>
+    <div class="faq-item">
+      <h3>Does UnMeet listen to my meetings?</h3>
+      <p>Never. We don't access your microphone, camera, or meeting content. We only detect that a meeting tab is open — by URL pattern matching. No audio, no video, no screen recording.</p>
+    </div>
+    <div class="faq-item">
+      <h3>How is the cost calculated?</h3>
+      <p>You set your hourly rate (or we estimate one based on your role). Meeting cost = duration × participants × avg hourly rate. You control the numbers.</p>
+    </div>
+    <div class="faq-item">
+      <h3>Who sees my data?</h3>
+      <p>You. Only you. All tracking happens locally in your browser. Cloud sync is optional and end-to-end encrypted. Your boss cannot access your dashboard.</p>
+    </div>
+    <div class="faq-item">
+      <h3>Which meeting platforms do you support?</h3>
+      <p>Google Meet, Zoom Web, Microsoft Teams, and anything that opens in a browser tab. Desktop app support coming soon.</p>
+    </div>
+    <div class="faq-item">
+      <h3>When is it launching?</h3>
+      <p>Chrome extension beta: August 2026. Sign up above to get early access.</p>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <p>UnMeet · <a href="https://github.com/bambi2008/unmeet">GitHub</a> · Built for people who value their time.</p>
+  </footer>
+
+  <script>
+    document.getElementById('waitlist-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('email').value;
+      // TODO: Replace with actual backend endpoint
+      // For now, just show success
+      document.getElementById('waitlist-form').style.display = 'none';
+      document.getElementById('success').style.display = 'block';
+      // Log to console for manual collection during beta
+      console.log('Waitlist signup:', email);
+    });
+  </script>
+</body>
+</html>

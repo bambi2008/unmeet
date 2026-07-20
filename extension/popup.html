@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    :root {
+      --bg: #090A0E;
+      --surface: #111318;
+      --border: #1E2028;
+      --text: #B0B3BD;
+      --text-dim: #5C5F6B;
+      --accent: #3B82F6;
+      --red: #EF4444;
+      --green: #10B981;
+      --amber: #F59E0B;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      width: 360px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+      font-size: 13px;
+      padding: 16px;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .logo { font-size: 18px; font-weight: 700; color: #fff; }
+    .logo span { color: var(--accent); }
+    .settings-link { color: var(--text-dim); text-decoration: none; font-size: 12px; }
+    .settings-link:hover { color: var(--accent); }
+
+    /* Live indicator */
+    .live-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px;
+      border-radius: 10px;
+      margin-bottom: 12px;
+    }
+    .live-bar.active { background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.2); }
+    .live-bar.idle { background: var(--surface); border: 1px solid var(--border); }
+    .live-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .live-dot.on { background: var(--green); box-shadow: 0 0 8px rgba(16,185,129,0.4); }
+    .live-dot.off { background: var(--text-dim); }
+    .live-info { flex: 1; }
+    .live-label { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; }
+    .live-platform { font-size: 13px; color: #fff; font-weight: 600; }
+    .live-timer { font-size: 11px; color: var(--text-dim); }
+    .live-cost {
+      font-size: 13px; color: var(--red); font-weight: 600;
+      text-align: right;
+    }
+
+    /* Stats */
+    .stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      text-align: center;
+    }
+    .stat-card .value { font-size: 20px; font-weight: 700; color: #fff; line-height: 1; }
+    .stat-card .label { font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 4px; }
+
+    /* Recent meetings */
+    .section-title {
+      font-size: 11px; color: var(--text-dim); text-transform: uppercase;
+      letter-spacing: 0.05em; margin-bottom: 8px;
+    }
+    .meeting-item {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 8px 0; border-bottom: 1px solid var(--border);
+    }
+    .meeting-item:last-child { border-bottom: none; }
+    .meeting-platform { font-weight: 600; color: #fff; }
+    .meeting-time { font-size: 11px; color: var(--text-dim); }
+    .meeting-duration { font-size: 12px; color: var(--text); }
+    .meeting-rating { font-size: 11px; }
+    .rating-high { color: var(--green); }
+    .rating-low { color: var(--red); }
+
+    .empty-state {
+      text-align: center; padding: 24px 0; color: var(--text-dim);
+    }
+    .footer {
+      margin-top: 12px; text-align: center;
+      font-size: 10px; color: var(--text-dim);
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo">Un<span>Meet</span></div>
+    <a class="settings-link" href="#" id="open-options">Settings</a>
+  </div>
+
+  <!-- Live indicator -->
+  <div class="live-bar idle" id="live-bar">
+    <div class="live-dot off" id="live-dot"></div>
+    <div class="live-info">
+      <div class="live-label" id="live-label">No meeting</div>
+      <div class="live-platform" id="live-platform"></div>
+      <div class="live-timer" id="live-timer"></div>
+    </div>
+    <div class="live-cost" id="live-cost"></div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats">
+    <div class="stat-card">
+      <div class="value" id="stat-today-hours">0h</div>
+      <div class="label">Today</div>
+    </div>
+    <div class="stat-card">
+      <div class="value" id="stat-week-hours">0h</div>
+      <div class="label">This week</div>
+    </div>
+    <div class="stat-card">
+      <div class="value" id="stat-count">0</div>
+      <div class="label">Meetings</div>
+    </div>
+    <div class="stat-card">
+      <div class="value" id="stat-rating">—</div>
+      <div class="label">Avg Rating</div>
+    </div>
+  </div>
+
+  <!-- Recent meetings -->
+  <div class="section-title">Recent meetings</div>
+  <div id="meeting-list">
+    <div class="empty-state">No meetings tracked yet.<br>Join a call to start.</div>
+  </div>
+
+  <div class="footer">All data stored locally</div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
