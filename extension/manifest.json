@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "UnMeet",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Measure the real cost of your meetings. Know which ones to kill.",
   "icons": {
     "16": "icons/icon16.png",
@@ -11,8 +11,7 @@
   "permissions": [
     "storage",
     "tabs",
-    "alarms",
-    "identity"
+    "alarms"
   ],
   "host_permissions": [
     "https://meet.google.com/*",
@@ -22,9 +21,9 @@
     "https://*.feishu.cn/*",
     "https://meeting.tencent.com/*",
     "https://*.ringcentral.com/*",
-    "https://*.whereby.com/*",
-    "https://calendar.google.com/*"
+    "https://*.whereby.com/*"
   ],
+  "homepage_url": "https://github.com/bambi2008/unmeet",
   "background": {
     "service_worker": "background.js"
   },
