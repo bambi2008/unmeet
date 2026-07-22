@@ -9,9 +9,36 @@ const os = require('os');
 const DATA_DIR = path.join(os.homedir(), 'AppData', 'Local', 'UnMeet');
 const TOKEN_PATH = path.join(DATA_DIR, 'calendar-token.json');
 
-// Google OAuth client — replace with your own in production
-const CLIENT_ID = '458391479461-abcdefg.apps.googleusercontent.com'; // Placeholder
-const CLIENT_SECRET = 'GOCSPX-abcdefg'; // Placeholder
+// Google OAuth client — read from downloaded credentials file
+const CREDENTIALS_PATH = path.join(DATA_DIR, 'google-credentials.json');
+
+function getCredentials() {
+  // Try app data dir first, then look on Desktop for the downloaded file
+  const desktopPath = path.join(os.homedir(), 'Desktop');
+  const files = fs.readdirSync(desktopPath).filter(f => f.startsWith('client_secret_') && f.endsWith('.json'));
+  
+  if (fs.existsSync(CREDENTIALS_PATH)) {
+    return JSON.parse(fs.readFileSync(CREDENTIALS_PATH, 'utf8'));
+  }
+  if (files.length > 0) {
+    const src = path.join(desktopPath, files[0]);
+    const data = JSON.parse(fs.readFileSync(src, 'utf8'));
+    // Copy to app data for persistence
+    fs.copyFileSync(src, CREDENTIALS_PATH);
+    return data;
+  }
+  throw new Error('Google credentials not found. Download OAuth client JSON from Google Cloud Console and place it in ' + DATA_DIR);
+}
+
+function getClientId() {
+  const creds = getCredentials();
+  return creds.installed?.client_id || creds.web?.client_id || '';
+}
+
+function getClientSecret() {
+  const creds = getCredentials();
+  return creds.installed?.client_secret || creds.web?.client_secret || '';
+}
 const REDIRECT_PORT = 51337;
 const REDIRECT_URI = `http://localhost:${REDIRECT_PORT}/oauth2callback`;
 const SCOPES = ['https://www.googleapis.com/auth/calendar.readonly'];
@@ -39,7 +66,7 @@ class CalendarService {
 
   // ── OAuth flow ──
   async startAuth() {
-    this.auth = new google.auth.OAuth2(CLIENT_ID, CLIENT_SECRET, REDIRECT_URI);
+    this.auth = new google.auth.OAuth2(getClientId(), getClientSecret(), REDIRECT_URI);
     const authUrl = this.auth.generateAuthUrl({
       access_type: 'offline',
       scope: SCOPES,
