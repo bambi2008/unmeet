@@ -41,31 +41,40 @@ class Tracker {
   }
 
   // ── Active window detection ──
+  _getPsScriptPath() {
+    // Write PowerShell helper script on first call
+    const scriptDir = path.join(DATA_DIR, 'scripts');
+    if (!fs.existsSync(scriptDir)) fs.mkdirSync(scriptDir, { recursive: true });
+    const psPath = path.join(scriptDir, 'get-foreground-window.ps1');
+    if (!fs.existsSync(psPath)) {
+      const psCode = `
+Add-Type -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+using System.Text;
+public class WinAPI {
+  [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
+  [DllImport("user32.dll")] public static extern int GetWindowText(IntPtr hWnd, StringBuilder text, int count);
+  [DllImport("user32.dll")] public static extern int GetWindowTextLength(IntPtr hWnd);
+}
+'@
+$hwnd = [WinAPI]::GetForegroundWindow()
+$len = [WinAPI]::GetWindowTextLength($hwnd)
+$sb = New-Object System.Text.StringBuilder($len + 1)
+[WinAPI]::GetWindowText($hwnd, $sb, $sb.Capacity)
+$sb.ToString()
+`.trim();
+      fs.writeFileSync(psPath, psCode, 'utf8');
+    }
+    return psPath;
+  }
+
   getActiveWindowTitle() {
     try {
       if (process.platform === 'win32') {
-        // PowerShell: get foreground window title
-        const psScript = `
-          Add-Type -TypeDefinition @"
-            using System;
-            using System.Runtime.InteropServices;
-            using System.Text;
-            public class WinAPI {
-              [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
-              [DllImport("user32.dll")] public static extern int GetWindowText(IntPtr hWnd, StringBuilder text, int count);
-              [DllImport("user32.dll")] public static extern int GetWindowTextLength(IntPtr hWnd);
-            }
-"@;
-          $hwnd = [WinAPI]::GetForegroundWindow();
-          $len = [WinAPI]::GetWindowTextLength($hwnd);
-          $sb = New-Object System.Text.StringBuilder($len + 1);
-          [WinAPI]::GetWindowText($hwnd, $sb, $sb.Capacity);
-          $sb.ToString()
-        `;
-        const result = execSync(`powershell -NoProfile -Command "${psScript.replace(/\n/g, ' ').replace(/"/g, '\\"')}"`, {
-          timeout: 3000,
-          encoding: 'utf8',
-          windowsHide: true,
+        const psPath = this._getPsScriptPath();
+        const result = execSync(`powershell -NoProfile -ExecutionPolicy Bypass -File "${psPath}"`, {
+          timeout: 3000, encoding: 'utf8', windowsHide: true,
         }).trim();
         return result;
       } else if (process.platform === 'darwin') {
