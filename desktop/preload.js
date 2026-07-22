@@ -14,6 +14,9 @@ contextBridge.exposeInMainWorld('unmeet', {
   exportData: () => ipcRenderer.invoke('export-data'),
   clearData: () => ipcRenderer.invoke('clear-data'),
 
+  // Insights
+  getInsights: () => ipcRenderer.invoke('get-insights'),
+
   // Navigation events from main process
   onNavigate: (callback) => ipcRenderer.on('navigate', (_, section) => callback(section)),
 

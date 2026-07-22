@@ -2,14 +2,17 @@
 const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, screen } = require('electron');
 const path = require('path');
 const { Tracker } = require('./tracker');
+const { MeetingClassifier } = require('./classifier');
 
 let tray = null;
 let dashboardWindow = null;
 let tracker = null;
+let classifier = null;
 
 // ── App lifecycle ──
 app.whenReady().then(() => {
   tracker = new Tracker();
+  classifier = new MeetingClassifier();
   createTray();
   tracker.start();
 
@@ -20,6 +23,7 @@ app.whenReady().then(() => {
   ipcMain.handle('save-settings', (_, settings) => tracker.saveSettings(settings));
   ipcMain.handle('export-data', () => tracker.exportData());
   ipcMain.handle('clear-data', () => tracker.clearData());
+  ipcMain.handle('get-insights', () => classifier.analyze(tracker.meetingLog));
 });
 
 app.on('window-all-closed', (e) => {

@@ -35,12 +35,13 @@ function navigate(page) {
   document.querySelectorAll('.nav-item').forEach(item => {
     item.classList.toggle('active', item.dataset.page === page);
   });
-  ['dashboard', 'meetings', 'settings'].forEach(p => {
+  ['dashboard', 'insights', 'meetings', 'settings'].forEach(p => {
     const el = document.getElementById(`page-${p}`);
     if (el) el.classList.toggle('hidden', p !== page);
   });
 
   if (page === 'meetings') renderAllMeetings();
+  if (page === 'insights') renderInsights();
   if (page === 'settings') loadSettingsForm();
 }
 
@@ -209,3 +210,141 @@ function escapeHtml(str) {
   div.textContent = str;
   return div.innerHTML;
 }
+
+// ── Insights page ──
+async function renderInsights() {
+  const insights = await window.unmeet.getInsights();
+  if (!insights || !insights.fingerprint) {
+    document.getElementById('health-score-section').innerHTML =
+      '<div style="color:var(--text-dim);text-align:center;padding:48px;">Track at least 5 meetings to unlock insights.</div>';
+    return;
+  }
+
+  const fp = insights.fingerprint;
+  const hs = insights.healthScore;
+  const hl = insights.healthLabel;
+
+  // Health badge
+  const badge = document.getElementById('health-badge');
+  if (badge) {
+    badge.textContent = hs != null ? `${hl} · ${hs}/100` : '—';
+    badge.style.background = hs >= 70 ? 'rgba(16,185,129,0.1)' : hs >= 40 ? 'rgba(245,158,11,0.1)' : 'rgba(239,68,68,0.1)';
+    badge.style.color = hs >= 70 ? '#10B981' : hs >= 40 ? '#F59E0B' : '#EF4444';
+  }
+
+  // Health score bar
+  const scoreBar = document.getElementById('health-score-section');
+  const scoreColor = hs >= 70 ? '#10B981' : hs >= 40 ? '#F59E0B' : '#EF4444';
+  scoreBar.innerHTML = `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;">
+      <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+        <span style="color:#fff;font-weight:600;">Meeting Health Score</span>
+        <span style="color:${scoreColor};font-weight:700;font-size:24px;">${hs}/100</span>
+      </div>
+      <div style="background:var(--bg);border-radius:8px;height:12px;overflow:hidden;">
+        <div style="width:${hs}%;height:100%;background:${scoreColor};border-radius:8px;transition:width 0.5s;"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:4px;font-size:11px;color:var(--text-dim);">
+        <span>🔴 Critical</span><span>🟡 Needs Work</span><span>🟢 Healthy</span>
+      </div>
+    </div>`;
+
+  // Fingerprint cards
+  const cards = document.getElementById('fingerprint-cards');
+  cards.innerHTML = `
+    <div class="stat-card">
+      <div class="icon">📊</div>
+      <div class="value">${fp.totalMeetings}</div>
+      <div class="label">Total Meetings (30d)</div>
+    </div>
+    <div class="stat-card">
+      <div class="icon">⏱️</div>
+      <div class="value">${fp.totalHours}h</div>
+      <div class="label">Total Hours</div>
+    </div>
+    <div class="stat-card">
+      <div class="icon">📏</div>
+      <div class="value">${fp.avgDuration}m</div>
+      <div class="label">Avg Duration</div>
+    </div>
+    <div class="stat-card">
+      <div class="icon">⭐</div>
+      <div class="value">${fp.avgRating || '—'}</div>
+      <div class="label">Avg Rating</div>
+    </div>
+    <div class="stat-card">
+      <div class="icon">🔝</div>
+      <div class="value">${fp.topTypes[0]?.label || '—'}</div>
+      <div class="label">Top Meeting Type</div>
+    </div>
+    <div class="stat-card">
+      <div class="icon">📅</div>
+      <div class="value">${fp.peakDayName}</div>
+      <div class="label">Busiest Day</div>
+    </div>
+    <div class="stat-card">
+      <div class="icon">🕐</div>
+      <div class="value">${fp.peakHour}:00</div>
+      <div class="label">Peak Hour</div>
+    </div>
+    <div class="stat-card">
+      <div class="icon">🧩</div>
+      <div class="value">${fp.fragmentationScore}</div>
+      <div class="label">Fragmentation</div>
+    </div>`;
+
+  // Personal insights
+  const piEl = document.getElementById('personal-insights');
+  if (fp.insights && fp.insights.length > 0) {
+    piEl.innerHTML = fp.insights.map(i => `
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 18px;margin-bottom:10px;display:flex;align-items:flex-start;gap:12px;">
+        <span style="font-size:20px;">${i.icon}</span>
+        <div>
+          <div style="color:#fff;font-weight:600;font-size:12px;text-transform:uppercase;margin-bottom:4px;color:${
+            i.severity==='critical'?'#EF4444':i.severity==='warning'?'#F59E0B':'#3B82F6'
+          }">${i.severity}</div>
+          <div style="color:var(--text);">${i.text}</div>
+        </div>
+      </div>
+    `).join('');
+  } else {
+    piEl.innerHTML = '<div style="color:var(--text-dim);padding:16px;">Looking good! No major issues detected.</div>';
+  }
+
+  // Recurring meetings
+  const rt = document.getElementById('recurring-table');
+  if (insights.recurring && insights.recurring.length > 0) {
+    const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    rt.innerHTML = insights.recurring.slice(0, 10).map(r => `
+      <tr>
+        <td style="color:#fff;">${days[r.day]} ${r.timeBlock}</td>
+        <td>${r.count}x</td>
+        <td>${r.avgDuration}m</td>
+        <td>${r.avgRating ? r.avgRating+'/5' : '—'}</td>
+        <td><span style="color:${MEETING_TYPE_COLORS[r.type]||'var(--text-dim)'};">${r.type}</span></td>
+        <td style="font-size:11px;color:${r.suggestion?'var(--amber)':'var(--text-dim)'};">${r.suggestion || '—'}</td>
+      </tr>
+    `).join('');
+  }
+
+  // Weekly trend chart
+  const wt = document.getElementById('weekly-trend');
+  if (insights.trend && insights.trend.length > 0) {
+    const maxH = Math.max(...insights.trend.map(t => t.hours), 1);
+    wt.innerHTML = insights.trend.map(t => {
+      const h = Math.round(t.hours / maxH * 120);
+      const color = t.hours > 15 ? '#EF4444' : t.hours > 10 ? '#F59E0B' : '#10B981';
+      return `<div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;">
+        <span style="font-size:10px;color:var(--text-dim);">${t.hours}h</span>
+        <div style="width:100%;max-width:60px;height:${Math.max(h,4)}px;background:${color};border-radius:6px 6px 0 0;min-height:4px;"></div>
+        <span style="font-size:10px;color:var(--text-dim);">${t.week.slice(5)}</span>
+      </div>`;
+    }).join('');
+  }
+}
+
+const MEETING_TYPE_COLORS = {
+  standup: '#10B981', one_on_one: '#3B82F6', decision: '#F59E0B',
+  broadcast: '#8B5CF6', workshop: '#EC4899', social: '#F97316',
+  deep_work_block: '#06B6D4', unknown: '#5C5F6B',
+};
