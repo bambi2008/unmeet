@@ -43,6 +43,7 @@ function navigate(page) {
   if (page === 'meetings') renderAllMeetings();
   if (page === 'insights') renderInsights();
   if (page === 'team') renderTeam();
+  if (page === 'analysis') renderAnalysis();
   if (page === 'settings') loadSettingsForm();
 }
 
@@ -166,6 +167,7 @@ function renderAllMeetings() {
 function loadSettingsForm() {
   document.getElementById('setting-rate').value = settings.hourlyRate;
   document.getElementById('setting-currency').value = settings.currency;
+  loadCalendarStatus();
 }
 
 async function saveSettings() {
@@ -491,4 +493,82 @@ function handleImport(e) {
     renderTeam();
   };
   reader.readAsText(file);
+}
+
+// ── Analysis page ──
+async function renderAnalysis() {
+  const log = await window.unmeet.getLog();
+  const sel = document.getElementById('analysis-meeting-select');
+  sel.innerHTML = '<option value="">Select a meeting to analyze...</option>' +
+    (log || []).map(m => {
+      const d = new Date(m.startTime);
+      const t = d.toLocaleString([], { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' });
+      return `<option value="${m.id}">${t} — ${m.platform} (${m.duration}m)</option>`;
+    }).join('');
+
+  document.getElementById('load-analysis-btn').onclick = async () => {
+    const id = sel.value;
+    if (!id) return;
+    const analysis = await window.unmeet.getMeetingAnalysis(id);
+    const content = document.getElementById('analysis-content');
+    if (!analysis || analysis.error) {
+      content.innerHTML = '<div style="color:var(--text-dim);padding:32px;text-align:center;">No analysis available for this meeting. Analysis is generated when audio recording is enabled.</div>';
+      return;
+    }
+    content.innerHTML = `
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px;">
+        <div style="color:#fff;font-weight:600;font-size:16px;margin-bottom:12px;">Summary</div>
+        <div style="color:var(--text);line-height:1.6;">${escapeHtml(analysis.summary || 'No summary generated.')}</div>
+        ${analysis.effectivenessScore ? `<div style="margin-top:12px;display:flex;gap:16px;">
+          <span style="color:${analysis.effectivenessScore>=7?'var(--green)':analysis.effectivenessScore>=4?'var(--amber)':'var(--red)'};font-weight:600;">Effectiveness: ${analysis.effectivenessScore}/10</span>
+          ${analysis.wastedTimePct ? `<span style="color:var(--red);">Wasted: ${analysis.wastedTimePct}% of time</span>` : ''}
+          ${analysis.shouldHaveBeenEmail ? '<span style="color:var(--amber);">⚠ Should have been an email</span>' : ''}
+        </div>` : ''}
+      </div>
+      ${analysis.decisions?.length ? `
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px;">
+        <div style="color:#fff;font-weight:600;font-size:14px;margin-bottom:8px;">Decisions</div>
+        ${analysis.decisions.map(d => `<div style="color:var(--text);padding:4px 0;">• ${escapeHtml(d)}</div>`).join('')}
+      </div>` : ''}
+      ${analysis.actionItems?.length ? `
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px;">
+        <div style="color:#fff;font-weight:600;font-size:14px;margin-bottom:8px;">Action Items</div>
+        ${analysis.actionItems.map(a => `<div style="color:var(--text);padding:4px 0;">• ${escapeHtml(a.task || a)} ${a.assignee ? '@'+escapeHtml(a.assignee) : ''} ${a.deadline ? 'by '+a.deadline : ''}</div>`).join('')}
+      </div>` : ''}
+      ${analysis.participation ? `
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px;">
+        <div style="color:#fff;font-weight:600;font-size:14px;margin-bottom:12px;">Participation</div>
+        <div style="color:var(--text-dim);margin-bottom:8px;">${analysis.participation.totalSpeakers} speakers · ${analysis.participation.meetingFlow || 'N/A'} flow</div>
+        ${analysis.participation.dominatedByFew ? '<div style="color:var(--amber);margin-bottom:8px;">⚠ Dominated by a few speakers</div>' : ''}
+        ${(analysis.participation.speakers||[]).map(s => `
+          <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);">
+            <span style="color:#fff;width:80px;">${escapeHtml(s.label)}</span>
+            <div style="flex:1;background:var(--bg);border-radius:4px;height:20px;">
+              <div style="width:${s.talkTimePct}%;height:100%;background:var(--accent);border-radius:4px;min-width:2px;"></div>
+            </div>
+            <span style="color:var(--text-dim);width:40px;text-align:right;font-size:11px;">${s.talkTimePct}%</span>
+          </div>
+        `).join('')}
+        ${analysis.participation.silentParticipants?.length ? `<div style="color:var(--red);margin-top:8px;font-size:12px;">Silent: ${analysis.participation.silentParticipants.join(', ')}</div>` : ''}
+      </div>` : ''}
+    `;
+  };
+}
+
+// ── Calendar (in Settings) ──
+async function loadCalendarStatus() {
+  const status = await window.unmeet.getCalendarStatus();
+  const btn = document.getElementById('connect-calendar-btn');
+  const st = document.getElementById('calendar-status');
+  if (status.connected) {
+    btn.textContent = 'Disconnect Calendar';
+    btn.onclick = async () => { await window.unmeet.disconnectCalendar(); loadCalendarStatus(); };
+    st.textContent = '✓ Connected';
+    st.style.color = 'var(--green)';
+  } else {
+    btn.textContent = 'Connect Google Calendar';
+    btn.onclick = async () => { await window.unmeet.connectCalendar(); loadCalendarStatus(); };
+    st.textContent = 'Not connected';
+    st.style.color = 'var(--text-dim)';
+  }
 }

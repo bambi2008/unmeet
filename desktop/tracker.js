@@ -144,6 +144,7 @@ $sb.ToString()
         startTime: Date.now(),
       };
       console.log(`[UnMeet] Meeting started: ${platform} — "${title}"`);
+      this._emit('meetingStarted', this.currentMeeting);
     } else if (platform && this.currentMeeting) {
       // Meeting still active — update platform if it changed
       if (platform !== this.currentMeeting.platform) {

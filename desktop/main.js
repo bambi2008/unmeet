@@ -4,24 +4,52 @@ const path = require('path');
 const { Tracker } = require('./tracker');
 const { MeetingClassifier } = require('./classifier');
 const { Workspace } = require('./workspace');
+const { CalendarService } = require('./calendar');
+const { AudioEngine } = require('./audio');
 
 let tray = null;
 let dashboardWindow = null;
 let tracker = null;
 let classifier = null;
 let workspace = null;
+let calendar = null;
+let audio = null;
 
 // ── App lifecycle ──
 app.whenReady().then(() => {
   tracker = new Tracker();
   classifier = new MeetingClassifier();
   workspace = new Workspace();
+  calendar = new CalendarService();
+  audio = new AudioEngine();
   createTray();
   tracker.start();
 
-  // Meeting ended → notification with rating
-  tracker.on('meetingEnded', (entry) => {
+  // Meeting ended → rating + stop audio + match calendar
+  tracker.on('meetingEnded', async (entry) => {
     showRatingNotification(entry);
+    audio.stopRecording();
+    // Match with calendar event for title
+    const calMatch = calendar.matchMeeting(entry);
+    if (calMatch) {
+      entry.calendarTitle = calMatch.title;
+      entry.attendees = calMatch.attendees;
+      entry.hasAgenda = calMatch.hasAgenda;
+    }
+    // Run audio pipeline if recording was active
+    if (audio.currentFilePath) {
+      const analysis = await audio.runFullPipeline(entry.id, entry.calendarTitle || '');
+      if (analysis) {
+        entry.analysis = analysis;
+      }
+    }
+  });
+
+  // Meeting started → start audio recording
+  tracker.on('meetingStarted', (entry) => {
+    audio.startRecording(entry.id);
+    // Refresh calendar events for matching
+    calendar.fetchEvents().catch(() => {});
   });
 
   // Restore dashboard if it was open
@@ -39,6 +67,15 @@ app.whenReady().then(() => {
   ipcMain.handle('get-team-stats', () => workspace.getTeamStats());
   ipcMain.handle('export-workspace', () => workspace.exportWorkspace());
   ipcMain.handle('rate-meeting', (_, id, rating) => tracker.rateMeeting(id, rating));
+  ipcMain.handle('connect-calendar', () => calendar.startAuth());
+  ipcMain.handle('disconnect-calendar', () => { calendar.disconnect(); return true; });
+  ipcMain.handle('get-calendar-status', () => ({ connected: calendar.connected }));
+  ipcMain.handle('get-upcoming-events', () => calendar.getUpcomingEvents());
+  ipcMain.handle('get-meeting-analysis', (_, meetingId) => {
+    const p = require('path').join(require('os').homedir(), 'AppData', 'Local', 'UnMeet', `analysis-${meetingId}.json`);
+    const fs = require('fs');
+    return fs.existsSync(p) ? JSON.parse(fs.readFileSync(p, 'utf8')) : null;
+  });
 });
 
 app.on('window-all-closed', (e) => {

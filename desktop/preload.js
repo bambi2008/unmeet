@@ -16,6 +16,11 @@ contextBridge.exposeInMainWorld('unmeet', {
   importMemberData: (id, j) => ipcRenderer.invoke('import-member-data', id, j),
   getTeamStats: () => ipcRenderer.invoke('get-team-stats'),
   exportWorkspace: () => ipcRenderer.invoke('export-workspace'),
+  connectCalendar: () => ipcRenderer.invoke('connect-calendar'),
+  disconnectCalendar: () => ipcRenderer.invoke('disconnect-calendar'),
+  getCalendarStatus: () => ipcRenderer.invoke('get-calendar-status'),
+  getUpcomingEvents: () => ipcRenderer.invoke('get-upcoming-events'),
+  getMeetingAnalysis: (id) => ipcRenderer.invoke('get-meeting-analysis', id),
   onNavigate: (cb) => ipcRenderer.on('navigate', (_, s) => cb(s)),
   onStateUpdate: (cb) => { setInterval(async () => { cb(await ipcRenderer.invoke('get-state')); }, 3000); },
 });
