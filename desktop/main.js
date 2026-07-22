@@ -19,6 +19,11 @@ app.whenReady().then(() => {
   createTray();
   tracker.start();
 
+  // Meeting ended → notification with rating
+  tracker.on('meetingEnded', (entry) => {
+    showRatingNotification(entry);
+  });
+
   // Restore dashboard if it was open
   ipcMain.handle('get-state', () => tracker.getState());
   ipcMain.handle('get-log', () => tracker.getLog());
@@ -170,3 +175,29 @@ function openDashboard(section) {
 app.on('before-quit', () => {
   app.isQuitting = true;
 });
+
+// ── Rating notification ──
+function showRatingNotification(entry) {
+  const { Notification } = require('electron');
+  if (!Notification.isSupported()) return;
+
+  // Show a notification with the meeting summary
+  const cost = ((entry.duration / 60) * (tracker.settings.hourlyRate || 75)).toFixed(2);
+  const dur = entry.duration >= 60
+    ? `${Math.floor(entry.duration/60)}h ${entry.duration%60}m`
+    : `${entry.duration}m`;
+
+  const n = new Notification({
+    title: `Meeting ended: ${entry.platform}`,
+    body: `${dur} · $${cost} · Tap to rate`,
+    silent: false,
+    urgency: 'normal',
+  });
+
+  n.on('click', () => {
+    // Open dashboard to meetings page where user can see the meeting
+    openDashboard('meetings');
+  });
+
+  n.show();
+}

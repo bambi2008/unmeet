@@ -106,9 +106,22 @@ $sb.ToString()
 
   // ── Main tracking loop ──
   start() {
+    this._listeners = {};
     this._tick();
-    this.intervalId = setInterval(() => this._tick(), 3000); // Check every 3 seconds
+    this.intervalId = setInterval(() => this._tick(), 3000);
     console.log('[UnMeet] Tracker started');
+  }
+
+  on(event, callback) {
+    if (!this._listeners) this._listeners = {};
+    if (!this._listeners[event]) this._listeners[event] = [];
+    this._listeners[event].push(callback);
+  }
+
+  _emit(event, data) {
+    if (this._listeners && this._listeners[event]) {
+      this._listeners[event].forEach(cb => cb(data));
+    }
   }
 
   stop() {
@@ -170,6 +183,7 @@ $sb.ToString()
     this._save();
 
     console.log(`[UnMeet] Meeting ended: ${entry.platform}, ${duration}min`);
+    this._emit('meetingEnded', entry);
     this.currentMeeting = null;
     return entry;
   }
