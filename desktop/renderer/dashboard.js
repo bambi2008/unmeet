@@ -35,13 +35,14 @@ function navigate(page) {
   document.querySelectorAll('.nav-item').forEach(item => {
     item.classList.toggle('active', item.dataset.page === page);
   });
-  ['dashboard', 'insights', 'meetings', 'settings'].forEach(p => {
+  ['dashboard', 'insights', 'team', 'meetings', 'settings'].forEach(p => {
     const el = document.getElementById(`page-${p}`);
     if (el) el.classList.toggle('hidden', p !== page);
   });
 
   if (page === 'meetings') renderAllMeetings();
   if (page === 'insights') renderInsights();
+  if (page === 'team') renderTeam();
   if (page === 'settings') loadSettingsForm();
 }
 
@@ -348,3 +349,139 @@ const MEETING_TYPE_COLORS = {
   broadcast: '#8B5CF6', workshop: '#EC4899', social: '#F97316',
   deep_work_block: '#06B6D4', unknown: '#5C5F6B',
 };
+
+// ── Team page ──
+async function renderTeam() {
+  const ws = await window.unmeet.getWorkspace();
+  const stats = await window.unmeet.getTeamStats();
+
+  // Setup event listeners
+  document.getElementById('add-member-btn').onclick = addMember;
+  document.getElementById('export-ws-btn').onclick = exportWorkspace;
+  document.getElementById('import-btn').onclick = () => document.getElementById('import-file-input').click();
+  document.getElementById('import-file-input').onchange = handleImport;
+
+  // Populate import member select
+  const sel = document.getElementById('import-member-select');
+  sel.innerHTML = '<option value="">Select member...</option>' +
+    ws.members.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
+
+  // Render members table
+  const tbody = document.getElementById('team-members-table');
+  if (ws.members.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" style="color:var(--text-dim);text-align:center;padding:32px;">No members yet</td></tr>';
+  } else {
+    tbody.innerHTML = ws.members.map(m => {
+      const ms = stats?.members?.find(s => s.id === m.id);
+      return `<tr>
+        <td style="color:#fff;">${escapeHtml(m.name)}</td>
+        <td><span style="color:${m.role==='owner'?'var(--accent)':'var(--text-dim)'};">${m.role}</span></td>
+        <td>$${m.hourlyRate}/h</td>
+        <td>${ms ? ms.thisWeek.hours+'h' : '—'}</td>
+        <td style="color:var(--red);">${ms ? '$'+ms.thisWeek.cost : '—'}</td>
+        <td>${ms?.avgRating ? ms.avgRating+'/5' : '—'}</td>
+        <td>
+          ${m.role !== 'owner' ? `<button class="btn-danger" style="font-size:11px;padding:4px 8px;margin:0;" onclick="removeMember('${m.id}')">Remove</button>` : ''}
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+  // Team stats cards
+  const cards = document.getElementById('team-stats-cards');
+  if (stats) {
+    cards.innerHTML = `
+      <div class="stat-card">
+        <div class="icon">👥</div>
+        <div class="value">${stats.membersWithData}/${stats.totalMembers}</div>
+        <div class="label">Active Members</div>
+      </div>
+      <div class="stat-card">
+        <div class="icon">⏱️</div>
+        <div class="value">${stats.thisWeek.totalHours}h</div>
+        <div class="label">Team Hours (Week)</div>
+      </div>
+      <div class="stat-card">
+        <div class="icon">📊</div>
+        <div class="value">${stats.thisWeek.totalMeetings}</div>
+        <div class="label">Team Meetings (Week)</div>
+      </div>
+      <div class="stat-card">
+        <div class="icon">💸</div>
+        <div class="value">$${stats.thisWeek.totalCost.toLocaleString()}</div>
+        <div class="label">Team Cost (Week)</div>
+      </div>
+      <div class="stat-card">
+        <div class="icon">📏</div>
+        <div class="value">${stats.avgHoursPerPerson}h</div>
+        <div class="label">Avg Per Person</div>
+      </div>
+      <div class="stat-card">
+        <div class="icon">📅</div>
+        <div class="value">$${Math.round(stats.thisWeek.totalCost*52/1000)}k</div>
+        <div class="label">Est. Annual Cost</div>
+      </div>`;
+  } else {
+    cards.innerHTML = '<div style="grid-column:1/-1;color:var(--text-dim);text-align:center;padding:32px;">Import member data to see team stats.</div>';
+  }
+
+  // Team insights
+  const ti = document.getElementById('team-insights');
+  if (stats?.insights?.length > 0) {
+    ti.innerHTML = stats.insights.map(i => `
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 18px;margin-bottom:10px;display:flex;align-items:flex-start;gap:12px;">
+        <span style="font-size:20px;">${i.icon}</span>
+        <div>
+          <div style="color:#fff;font-weight:600;font-size:12px;text-transform:uppercase;margin-bottom:4px;color:${
+            i.severity==='critical'?'#EF4444':i.severity==='warning'?'#F59E0B':'#3B82F6'
+          }">${i.severity}</div>
+          <div style="color:var(--text);">${i.text}</div>
+        </div>
+      </div>
+    `).join('');
+  } else {
+    ti.innerHTML = '';
+  }
+
+  // Expose removeMember to onclick
+  window._removeMember = removeMember;
+}
+
+async function addMember() {
+  const name = document.getElementById('new-member-name').value.trim();
+  const rate = parseInt(document.getElementById('new-member-rate').value) || 75;
+  if (!name) return;
+  await window.unmeet.addMember(name, rate);
+  document.getElementById('new-member-name').value = '';
+  renderTeam();
+}
+
+async function removeMember(id) {
+  if (!confirm('Remove this member?')) return;
+  await window.unmeet.removeMember(id);
+  renderTeam();
+}
+
+async function exportWorkspace() {
+  const data = await window.unmeet.exportWorkspace();
+  const blob = new Blob([data], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `unmeet-workspace-${new Date().toISOString().split('T')[0]}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function handleImport(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async (ev) => {
+    const memberId = document.getElementById('import-member-select').value;
+    if (!memberId) { alert('Select a member first'); return; }
+    await window.unmeet.importMemberData(memberId, ev.target.result);
+    renderTeam();
+  };
+  reader.readAsText(file);
+}

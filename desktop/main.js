@@ -3,16 +3,19 @@ const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, screen } = require
 const path = require('path');
 const { Tracker } = require('./tracker');
 const { MeetingClassifier } = require('./classifier');
+const { Workspace } = require('./workspace');
 
 let tray = null;
 let dashboardWindow = null;
 let tracker = null;
 let classifier = null;
+let workspace = null;
 
 // ── App lifecycle ──
 app.whenReady().then(() => {
   tracker = new Tracker();
   classifier = new MeetingClassifier();
+  workspace = new Workspace();
   createTray();
   tracker.start();
 
@@ -24,6 +27,12 @@ app.whenReady().then(() => {
   ipcMain.handle('export-data', () => tracker.exportData());
   ipcMain.handle('clear-data', () => tracker.clearData());
   ipcMain.handle('get-insights', () => classifier.analyze(tracker.meetingLog));
+  ipcMain.handle('get-workspace', () => workspace.data);
+  ipcMain.handle('add-member', (_, name, hourlyRate) => workspace.addMember(name, hourlyRate));
+  ipcMain.handle('remove-member', (_, memberId) => workspace.removeMember(memberId));
+  ipcMain.handle('import-member-data', (_, memberId, jsonStr) => workspace.importMemberExport(jsonStr, memberId));
+  ipcMain.handle('get-team-stats', () => workspace.getTeamStats());
+  ipcMain.handle('export-workspace', () => workspace.exportWorkspace());
 });
 
 app.on('window-all-closed', (e) => {

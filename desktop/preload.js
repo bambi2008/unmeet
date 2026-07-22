@@ -17,6 +17,14 @@ contextBridge.exposeInMainWorld('unmeet', {
   // Insights
   getInsights: () => ipcRenderer.invoke('get-insights'),
 
+  // Workspace
+  getWorkspace: () => ipcRenderer.invoke('get-workspace'),
+  addMember: (name, rate) => ipcRenderer.invoke('add-member', name, rate),
+  removeMember: (id) => ipcRenderer.invoke('remove-member', id),
+  importMemberData: (id, json) => ipcRenderer.invoke('import-member-data', id, json),
+  getTeamStats: () => ipcRenderer.invoke('get-team-stats'),
+  exportWorkspace: () => ipcRenderer.invoke('export-workspace'),
+
   // Navigation events from main process
   onNavigate: (callback) => ipcRenderer.on('navigate', (_, section) => callback(section)),
 
