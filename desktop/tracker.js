@@ -213,6 +213,15 @@ $sb.ToString()
     return this.meetingLog.slice(0, 100);
   }
 
+  rateMeeting(id, rating) {
+    const m = this.meetingLog.find(e => e.id === id);
+    if (m) {
+      m.rating = Math.max(1, Math.min(5, rating));
+      this._save();
+    }
+    return m || null;
+  }
+
   getSettings() {
     return { ...this.settings };
   }

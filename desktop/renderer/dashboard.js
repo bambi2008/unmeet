@@ -125,7 +125,7 @@ function renderRecentMeetings(log) {
     const dur = m.duration >= 60 ? `${Math.floor(m.duration/60)}h ${m.duration%60}m` : `${m.duration}m`;
     const cost = ((m.duration / 60) * settings.hourlyRate).toFixed(0);
     const color = PLATFORM_COLORS[m.platform] || '#5C5F6B';
-    const stars = m.rating != null ? '★'.repeat(m.rating) + '☆'.repeat(5-m.rating) : '—';
+    const temp_unused = m.rating != null ? '★'.repeat(m.rating) + '☆'.repeat(5-m.rating) : '—';
     return `<tr>
       <td><span class="platform-badge" style="background:${color}20;color:${color}">${escapeHtml(m.platform)}</span></td>
       <td style="color:var(--text-dim);">${time}</td>
@@ -149,7 +149,7 @@ function renderAllMeetings() {
       const time = new Date(m.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       const dur = m.duration >= 60 ? `${Math.floor(m.duration/60)}h ${m.duration%60}m` : `${m.duration}m`;
       const cost = `${settings.currency}${((m.duration / 60) * settings.hourlyRate).toFixed(2)}`;
-      const stars = m.rating != null ? '★'.repeat(m.rating) + '☆'.repeat(5-m.rating) : '—';
+      const temp_unused = m.rating != null ? '★'.repeat(m.rating) + '☆'.repeat(5-m.rating) : '—';
       return `<tr>
         <td style="color:var(--text-dim);">${date}</td>
         <td>${escapeHtml(m.platform)}</td>
@@ -203,6 +203,13 @@ function updateSidebarStatus(state) {
   } else {
     el.innerHTML = '⚪ No meeting';
   }
+}
+
+
+async function rateMeetingAction(id, rating) {
+  await window.unmeet.rateMeeting(id, rating);
+  renderRecentMeetings();
+  renderAllMeetings();
 }
 
 // ── Helpers ──

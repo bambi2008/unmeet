@@ -38,6 +38,7 @@ app.whenReady().then(() => {
   ipcMain.handle('import-member-data', (_, memberId, jsonStr) => workspace.importMemberExport(jsonStr, memberId));
   ipcMain.handle('get-team-stats', () => workspace.getTeamStats());
   ipcMain.handle('export-workspace', () => workspace.exportWorkspace());
+  ipcMain.handle('rate-meeting', (_, id, rating) => tracker.rateMeeting(id, rating));
 });
 
 app.on('window-all-closed', (e) => {

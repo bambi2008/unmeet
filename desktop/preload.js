@@ -2,38 +2,20 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('unmeet', {
-  // State
   getState: () => ipcRenderer.invoke('get-state'),
   getLog: () => ipcRenderer.invoke('get-log'),
-
-  // Settings
+  rateMeeting: (id, rating) => ipcRenderer.invoke('rate-meeting', id, rating),
   getSettings: () => ipcRenderer.invoke('get-settings'),
-  saveSettings: (settings) => ipcRenderer.invoke('save-settings', settings),
-
-  // Data management
+  saveSettings: (s) => ipcRenderer.invoke('save-settings', s),
   exportData: () => ipcRenderer.invoke('export-data'),
   clearData: () => ipcRenderer.invoke('clear-data'),
-
-  // Insights
   getInsights: () => ipcRenderer.invoke('get-insights'),
-
-  // Workspace
   getWorkspace: () => ipcRenderer.invoke('get-workspace'),
-  addMember: (name, rate) => ipcRenderer.invoke('add-member', name, rate),
+  addMember: (n, r) => ipcRenderer.invoke('add-member', n, r),
   removeMember: (id) => ipcRenderer.invoke('remove-member', id),
-  importMemberData: (id, json) => ipcRenderer.invoke('import-member-data', id, json),
+  importMemberData: (id, j) => ipcRenderer.invoke('import-member-data', id, j),
   getTeamStats: () => ipcRenderer.invoke('get-team-stats'),
   exportWorkspace: () => ipcRenderer.invoke('export-workspace'),
-
-  // Navigation events from main process
-  onNavigate: (callback) => ipcRenderer.on('navigate', (_, section) => callback(section)),
-
-  // Listen for state updates
-  onStateUpdate: (callback) => {
-    // Poll state via IPC — lightweight
-    setInterval(async () => {
-      const state = await ipcRenderer.invoke('get-state');
-      callback(state);
-    }, 3000);
-  },
+  onNavigate: (cb) => ipcRenderer.on('navigate', (_, s) => cb(s)),
+  onStateUpdate: (cb) => { setInterval(async () => { cb(await ipcRenderer.invoke('get-state')); }, 3000); },
 });
