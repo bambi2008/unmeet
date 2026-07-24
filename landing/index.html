@@ -3,382 +3,333 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>UnMeet — What if you could buy back your time?</title>
-  <meta name="description" content="UnMeet measures the real cost of your meetings. Not another note-taker. A tool that tells you which meetings to kill.">
+  <title>UnMeet — What are your meetings actually costing?</title>
+  <meta name="description" content="UnMeet tracks your meetings across every platform and tells you what they cost. Not another note-taker. A tool for knowing which meetings to kill.">
   <style>
     :root {
-      --bg: #090A0E;
-      --surface: #111318;
-      --border: #1E2028;
-      --text: #B0B3BD;
-      --text-dim: #5C5F6B;
-      --accent: #3B82F6;
-      --accent-glow: rgba(59,130,246,0.15);
-      --red: #EF4444;
-      --green: #10B981;
-      --amber: #F59E0B;
+      --bg: #090A0E; --surface: #111318; --border: #1E2028;
+      --text: #B0B3BD; --text-dim: #5C5F6B; --accent: #3B82F6;
+      --accent-glow: rgba(59,130,246,0.12); --red: #EF4444;
+      --green: #10B981; --amber: #F59E0B;
     }
-
     * { margin: 0; padding: 0; box-sizing: border-box; }
-
     body {
-      background: var(--bg);
-      color: var(--text);
+      background: var(--bg); color: var(--text);
       font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', sans-serif;
-      line-height: 1.6;
-      -webkit-font-smoothing: antialiased;
+      line-height: 1.6; -webkit-font-smoothing: antialiased;
     }
 
-    /* ── Hero ── */
     .hero {
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      text-align: center;
-      padding: 2rem;
-      position: relative;
-      overflow: hidden;
+      min-height: 90vh; display: flex; flex-direction: column;
+      justify-content: center; align-items: center; text-align: center;
+      padding: 4rem 2rem; position: relative; overflow: hidden;
     }
-
     .hero::before {
-      content: '';
-      position: absolute;
-      top: -50%;
-      left: -50%;
-      width: 200%;
-      height: 200%;
+      content: ''; position: absolute; top: -50%; left: -50%;
+      width: 200%; height: 200%;
       background: radial-gradient(ellipse at center, rgba(59,130,246,0.03) 0%, transparent 70%);
       pointer-events: none;
     }
-
-    .logo {
-      font-size: 2.5rem;
-      font-weight: 700;
-      letter-spacing: -0.03em;
-      color: #fff;
-      margin-bottom: 0.5rem;
-    }
+    .logo { font-size: 2.5rem; font-weight: 700; letter-spacing: -0.03em; color: #fff; margin-bottom: 0.5rem; }
     .logo span { color: var(--accent); }
+    .tagline { font-size: 1.15rem; color: var(--text-dim); max-width: 520px; margin-bottom: 3rem; }
 
-    .tagline {
-      font-size: 1.25rem;
-      color: var(--text-dim);
-      max-width: 480px;
-      margin-bottom: 3rem;
+    /* ── Calculator ── */
+    .calculator {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 16px; padding: 28px 32px; max-width: 480px; width: 100%;
+      text-align: left; margin-bottom: 2rem;
     }
+    .calc-title { color: #fff; font-size: 1rem; font-weight: 600; margin-bottom: 20px; }
+    .form-group { margin-bottom: 14px; }
+    .form-group label { display: block; color: var(--text-dim); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+    .form-group input {
+      width: 100%; padding: 10px 14px; background: var(--bg);
+      border: 1px solid var(--border); border-radius: 8px;
+      color: #fff; font-size: 0.95rem; font-family: inherit; outline: none;
+    }
+    .form-group input:focus { border-color: var(--accent); }
+    .slider-group { display: flex; align-items: center; gap: 12px; }
+    .slider-group input[type=range] { flex: 1; accent-color: var(--accent); }
+    .slider-value { color: #fff; font-weight: 600; min-width: 50px; text-align: right; font-size: 0.9rem; }
 
-    /* ── Stat ── */
-    .stat-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 2rem;
-      max-width: 640px;
-      margin-bottom: 4rem;
+    .result {
+      margin-top: 20px; padding: 18px; background: rgba(239,68,68,0.06);
+      border: 1px solid rgba(239,68,68,0.15); border-radius: 10px;
+      text-align: center; display: none;
     }
+    .result .annual { font-size: 2.4rem; font-weight: 700; color: var(--red); letter-spacing: -0.02em; }
+    .result .monthly { font-size: 0.9rem; color: var(--text-dim); margin-top: 4px; }
+    .result .breakdown {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+      margin-top: 16px; text-align: center;
+    }
+    .breakdown-item .val { font-size: 1.2rem; font-weight: 700; color: #fff; }
+    .breakdown-item .lbl { font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; }
+    .assumptions { font-size: 0.7rem; color: var(--text-dim); margin-top: 12px; text-align: center; }
 
-    .stat {
-      text-align: center;
-    }
-    .stat-value {
-      font-size: 2.5rem;
-      font-weight: 700;
-      color: #fff;
-      line-height: 1;
-      margin-bottom: 0.5rem;
-    }
-    .stat-label {
-      font-size: 0.85rem;
-      color: var(--text-dim);
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-    }
-    .stat-value.red { color: var(--red); }
-    .stat-value.amber { color: var(--amber); }
+    /* ── Content sections ── */
+    .section { max-width: 760px; margin: 0 auto; padding: 5rem 2rem; border-top: 1px solid var(--border); }
+    .section-title { font-size: 1.4rem; font-weight: 700; color: #fff; letter-spacing: -0.02em; margin-bottom: 1.5rem; }
+    .section p { color: var(--text-dim); margin-bottom: 1rem; font-size: 0.95rem; }
+    .section a { color: var(--accent); }
 
-    /* ── Waitlist ── */
-    .waitlist {
-      display: flex;
-      gap: 0.75rem;
-      max-width: 400px;
-      width: 100%;
-    }
+    .feature-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 2rem; }
+    .feature-card { padding: 1.25rem; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+    .feature-card h3 { color: #fff; font-size: 0.95rem; margin-bottom: 0.5rem; }
+    .feature-card p { font-size: 0.85rem; margin-bottom: 0; }
 
-    .waitlist input {
-      flex: 1;
-      padding: 0.875rem 1.25rem;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      color: #fff;
-      font-size: 1rem;
-      font-family: inherit;
-      outline: none;
-      transition: border-color 0.2s;
-    }
-    .waitlist input:focus { border-color: var(--accent); }
-    .waitlist input::placeholder { color: var(--text-dim); }
+    .research-cite { font-size: 0.75rem; color: var(--text-dim); margin-top: 0.5rem; }
+    .research-cite::before { content: '📚 '; }
 
-    .waitlist button {
-      padding: 0.875rem 1.5rem;
-      background: var(--accent);
-      color: #fff;
-      border: none;
-      border-radius: 10px;
-      font-size: 1rem;
-      font-weight: 600;
-      font-family: inherit;
-      cursor: pointer;
-      transition: background 0.2s, transform 0.1s;
-      white-space: nowrap;
-    }
-    .waitlist button:hover { background: #2563EB; }
-    .waitlist button:active { transform: scale(0.97); }
-
-    .waitlist-success {
-      display: none;
-      color: var(--green);
-      font-size: 0.95rem;
-      margin-top: 1rem;
-    }
-
-    /* ── How it works ── */
-    .section {
-      max-width: 800px;
-      margin: 0 auto;
-      padding: 6rem 2rem;
-      border-top: 1px solid var(--border);
-    }
-
-    .section-title {
-      font-size: 1.5rem;
-      font-weight: 700;
-      color: #fff;
-      letter-spacing: -0.02em;
-      margin-bottom: 2.5rem;
-    }
-
-    .steps {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 2rem;
-      counter-reset: step;
-    }
-
-    .step {
-      position: relative;
-      padding-left: 3rem;
-    }
-    .step::before {
-      counter-increment: step;
-      content: "0" counter(step);
-      position: absolute;
-      left: 0;
-      top: 0;
-      font-size: 0.8rem;
-      font-weight: 600;
-      color: var(--accent);
-      font-variant-numeric: tabular-nums;
-    }
-    .step h3 {
-      color: #fff;
-      font-size: 1rem;
-      font-weight: 600;
-      margin-bottom: 0.5rem;
-    }
-    .step p {
-      color: var(--text-dim);
-      font-size: 0.9rem;
-    }
-
-    /* ── Comparison ── */
-    .compare {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 2rem;
-      margin-top: 1rem;
-    }
-
-    .compare-box {
-      padding: 1.5rem;
-      border-radius: 12px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-    }
-    .compare-box h4 {
-      font-size: 0.85rem;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      margin-bottom: 1rem;
-    }
+    .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-top: 1.5rem; }
+    .compare-box { padding: 1.25rem; border-radius: 12px; background: var(--surface); border: 1px solid var(--border); }
+    .compare-box h4 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 1rem; }
     .compare-box.them h4 { color: var(--red); }
     .compare-box.us h4 { color: var(--green); }
+    .compare-box li { padding: 0.3rem 0; font-size: 0.85rem; color: var(--text-dim); list-style: none; }
+    .compare-box li::before { content: '— '; }
 
-    .compare-box ul {
-      list-style: none;
-      font-size: 0.9rem;
-    }
-    .compare-box li {
-      padding: 0.4rem 0;
-      color: var(--text-dim);
-    }
-    .compare-box li::before { content: "— "; color: var(--text-dim); }
+    .pricing-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-top: 2rem; }
+    .pricing-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; text-align: center; }
+    .pricing-card.featured { border-color: var(--accent); }
+    .pricing-card h3 { color: #fff; font-size: 1rem; margin-bottom: 0.5rem; }
+    .pricing-card .price { font-size: 1.8rem; font-weight: 700; color: #fff; }
+    .pricing-card .period { font-size: 0.8rem; color: var(--text-dim); }
+    .pricing-card ul { list-style: none; margin: 1rem 0; font-size: 0.8rem; color: var(--text-dim); }
+    .pricing-card li { padding: 0.2rem 0; }
 
-    /* ── FAQ ── */
-    .faq-item {
-      margin-bottom: 1.5rem;
-    }
-    .faq-item h3 {
-      color: #fff;
-      font-size: 1rem;
-      font-weight: 600;
-      margin-bottom: 0.5rem;
-    }
-    .faq-item p {
-      color: var(--text-dim);
-      font-size: 0.9rem;
-    }
+    .footer { text-align: center; padding: 3rem 2rem; border-top: 1px solid var(--border); color: var(--text-dim); font-size: 0.8rem; }
 
-    /* ── Footer ── */
-    .footer {
-      text-align: center;
-      padding: 3rem 2rem;
-      border-top: 1px solid var(--border);
-      color: var(--text-dim);
-      font-size: 0.85rem;
-    }
-
-    .footer a {
-      color: var(--text);
-      text-decoration: none;
-    }
-    .footer a:hover { color: var(--accent); }
-
-    /* ── Responsive ── */
     @media (max-width: 640px) {
-      .stat-grid { grid-template-columns: 1fr; gap: 1.5rem; }
-      .steps { grid-template-columns: 1fr; }
-      .compare { grid-template-columns: 1fr; }
-      .waitlist { flex-direction: column; }
-      .logo { font-size: 2rem; }
-      .hero { padding: 3rem 1.5rem; min-height: auto; }
+      .feature-grid, .compare, .pricing-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
 <body>
 
-  <!-- ── Hero ── -->
-  <section class="hero">
-    <div class="logo">Un<span>Meet</span></div>
-    <p class="tagline">What if you could <em>buy back</em> your time?<br>UnMeet measures the real cost of meetings — and tells you which ones to kill.</p>
+<!-- Hero + Calculator -->
+<section class="hero">
+  <div class="logo">Un<span>Meet</span></div>
+  <p class="tagline">Your meeting platforms won't tell you what they cost.<br>UnMeet runs silently in the background and does exactly that.</p>
 
-    <div class="stat-grid">
-      <div class="stat">
-        <div class="stat-value red">31%</div>
-        <div class="stat-label">of meetings are unnecessary</div>
-      </div>
-      <div class="stat">
-        <div class="stat-value amber">$399B</div>
-        <div class="stat-label">global annual waste</div>
-      </div>
-      <div class="stat">
-        <div class="stat-value">6.2h</div>
-        <div class="stat-label">reclaimed per week avg</div>
+  <div class="calculator">
+    <div class="calc-title">Estimate what meetings cost your team</div>
+
+    <div class="form-group">
+      <label>Team size (including yourself)</label>
+      <div class="slider-group">
+        <input type="range" id="team-size" min="2" max="200" value="20" oninput="updateCalc()">
+        <span class="slider-value" id="team-size-val">20</span>
       </div>
     </div>
 
-    <form class="waitlist" id="waitlist-form">
-      <input type="email" id="email" placeholder="Your email address" required>
-      <button type="submit">Get early access</button>
-    </form>
-    <div class="waitlist-success" id="success">You're on the list. We'll be in touch.</div>
-  </section>
+    <div class="form-group">
+      <label>Average hourly rate (USD)</label>
+      <input type="number" id="hourly-rate" value="75" min="10" max="500" oninput="updateCalc()">
+    </div>
 
-  <!-- ── How it works ── -->
-  <section class="section">
-    <h2 class="section-title">How it works</h2>
-    <div class="steps">
-      <div class="step">
-        <h3>Install</h3>
-        <p>One-click Chrome extension. No account needed to start tracking.</p>
-      </div>
-      <div class="step">
-        <h3>Forget</h3>
-        <p>UnMeet quietly detects meetings across Zoom, Meet, Teams — zero input required.</p>
-      </div>
-      <div class="step">
-        <h3>Decide</h3>
-        <p>Weekly dashboard shows the cost. One-tap rating after each meeting. Data-backed decisions.</p>
+    <div class="form-group">
+      <label>Average weekly meeting hours per person</label>
+      <div class="slider-group">
+        <input type="range" id="meeting-hours" min="2" max="40" value="15" step="0.5" oninput="updateCalc()">
+        <span class="slider-value" id="meeting-hours-val">15h</span>
       </div>
     </div>
-  </section>
 
-  <!-- ── Comparison ── -->
-  <section class="section">
-    <h2 class="section-title">What UnMeet is <em>not</em></h2>
-    <div class="compare">
-      <div class="compare-box them">
-        <h4>Not another note-taker</h4>
-        <ul>
-          <li>We don't transcribe your meetings</li>
-          <li>We don't generate AI summaries</li>
-          <li>We don't integrate with your CRM</li>
-          <li>We don't sell meeting analytics to your boss</li>
-        </ul>
-      </div>
-      <div class="compare-box us">
-        <h4>We measure what matters</h4>
-        <ul>
-          <li>How many hours you spend in meetings</li>
-          <li>What those hours cost — in dollars</li>
-          <li>Which meetings are worth your time</li>
-          <li>Which ones you should never attend again</li>
-        </ul>
+    <div class="form-group">
+      <label>Estimated % of meetings that could be shorter or eliminated</label>
+      <div class="slider-group">
+        <input type="range" id="waste-pct" min="5" max="50" value="25" oninput="updateCalc()">
+        <span class="slider-value" id="waste-pct-val">25%</span>
       </div>
     </div>
-  </section>
 
-  <!-- ── FAQ ── -->
-  <section class="section">
-    <h2 class="section-title">FAQ</h2>
-    <div class="faq-item">
-      <h3>Does UnMeet listen to my meetings?</h3>
-      <p>Never. We don't access your microphone, camera, or meeting content. We only detect that a meeting tab is open — by URL pattern matching. No audio, no video, no screen recording.</p>
+    <div class="result" id="result">
+      <div class="annual" id="annual-cost"></div>
+      <div class="monthly" id="monthly-cost"></div>
+      <div class="breakdown">
+        <div class="breakdown-item">
+          <div class="val" id="weekly-hours"></div>
+          <div class="lbl">Weekly hours wasted</div>
+        </div>
+        <div class="breakdown-item">
+          <div class="val" id="per-person"></div>
+          <div class="lbl">Per person / week</div>
+        </div>
+      </div>
     </div>
-    <div class="faq-item">
-      <h3>How is the cost calculated?</h3>
-      <p>You set your hourly rate (or we estimate one based on your role). Meeting cost = duration × participants × avg hourly rate. You control the numbers.</p>
-    </div>
-    <div class="faq-item">
-      <h3>Who sees my data?</h3>
-      <p>You. Only you. All tracking happens locally in your browser. Cloud sync is optional and end-to-end encrypted. Your boss cannot access your dashboard.</p>
-    </div>
-    <div class="faq-item">
-      <h3>Which meeting platforms do you support?</h3>
-      <p>Google Meet, Zoom Web, Microsoft Teams, and anything that opens in a browser tab. Desktop app support coming soon.</p>
-    </div>
-    <div class="faq-item">
-      <h3>When is it launching?</h3>
-      <p>Chrome extension beta: August 2026. Sign up above to get early access.</p>
-    </div>
-  </section>
+    <div class="assumptions" id="assumptions"></div>
+  </div>
+</section>
 
-  <footer class="footer">
-    <p>UnMeet · <a href="https://github.com/bambi2008/unmeet">GitHub</a> · Built for people who value their time.</p>
-  </footer>
+<!-- What UnMeet does -->
+<section class="section">
+  <h2 class="section-title">What UnMeet actually does</h2>
+  <div class="feature-grid">
+    <div class="feature-card">
+      <h3>Detects meetings across every platform</h3>
+      <p>Zoom, Google Meet, Teams, Feishu, Tencent Meeting — desktop app or browser. One tracker, all platforms.</p>
+    </div>
+    <div class="feature-card">
+      <h3>Identifies low-efficiency patterns</h3>
+      <p>Back-to-back meetings, standups that keep growing, meetings on weekends, meetings with no breaks between them.</p>
+    </div>
+    <div class="feature-card">
+      <h3>Generates a weekly report</h3>
+      <p>Team hours, estimated cost, which recurring meetings are showing warning signs, and what to do about it.</p>
+    </div>
+    <div class="feature-card">
+      <h3>All data stays local</h3>
+      <p>No recording, no transcription, no cloud upload. Meeting content is never accessed. Only timing data is tracked.</p>
+    </div>
+  </div>
+</section>
 
-  <script>
-    document.getElementById('waitlist-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const email = document.getElementById('email').value;
-      // TODO: Replace with actual backend endpoint
-      // For now, just show success
-      document.getElementById('waitlist-form').style.display = 'none';
-      document.getElementById('success').style.display = 'block';
-      // Log to console for manual collection during beta
-      console.log('Waitlist signup:', email);
-    });
-  </script>
+<!-- Why -->
+<section class="section">
+  <h2 class="section-title">Why this exists</h2>
+  <p>Feishu won't tell you Feishu meetings cost too much. Teams won't suggest you use Teams less. Zoom's business model depends on you staying on the call.</p>
+  <p>UnMeet is the only tool with no conflict of interest. It doesn't sell meeting software. It helps you have fewer of them.</p>
+</section>
+
+<!-- The research -->
+<section class="section">
+  <h2 class="section-title">What the research says</h2>
+  <p>Three findings stand out from the academic literature:</p>
+  <p><strong>Interruptions are expensive.</strong> A single interruption costs ~23 minutes of recovery time before returning to deep focus. <span class="research-cite">Gloria Mark, UC Irvine (2008)</span></p>
+  <p><strong>Back-to-back meetings degrade quality.</strong> EEG measurements showed a ~40% drop in attention and engagement in the second consecutive meeting. <span class="research-cite">Microsoft Human Factors Lab (2021)</span></p>
+  <p><strong>Meetings spawn more meetings.</strong> About 30% of meetings generate informal follow-up discussions that aren't on anyone's calendar. <span class="research-cite">HBR, "Stop the Meeting Madness" (2019)</span></p>
+  <p style="margin-top:1.5rem;">Isolated, these findings are interesting. Combined, they describe a system where time leaks out in ways no one measures — and no one is accountable for.</p>
+</section>
+
+<!-- Comparison -->
+<section class="section">
+  <h2 class="section-title">What UnMeet is — and isn't</h2>
+  <div class="compare">
+    <div class="compare-box them">
+      <h4>Not another meeting tool</h4>
+      <ul>
+        <li>We don't transcribe your meetings</li>
+        <li>We don't generate AI summaries</li>
+        <li>We don't record audio or video</li>
+        <li>We don't sell meeting software</li>
+      </ul>
+    </div>
+    <div class="compare-box us">
+      <h4>Meeting cost governance</h4>
+      <ul>
+        <li>Track time across all platforms</li>
+        <li>Flag recurring meetings that keep growing</li>
+        <li>Weekly report with patterns and suggestions</li>
+        <li>Your data stays on your machine</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- Early warnings -->
+<section class="section">
+  <h2 class="section-title">Signs your meetings need attention</h2>
+  <div class="feature-grid">
+    <div class="feature-card">
+      <h3>Standups have crept past 18 minutes</h3>
+      <p>Scrum Guide recommends 15 minutes. When they drift longer, it's usually a sign that problem-solving has replaced status updates.</p>
+    </div>
+    <div class="feature-card">
+      <h3>Back-to-back meeting blocks</h3>
+      <p>No buffer between meetings means each one starts with a mental context-switch penalty.</p>
+    </div>
+    <div class="feature-card">
+      <h3>Recurring meetings no one can explain</h3>
+      <p>"We've always had this Wednesday sync." UnMeet detects meetings that haven't changed in months.</p>
+    </div>
+    <div class="feature-card">
+      <h3>People working around the meetings</h3>
+      <p>When your team's real work happens before 9am or after 6pm, the calendar is the problem.</p>
+    </div>
+  </div>
+</section>
+
+<!-- Pricing -->
+<section class="section">
+  <h2 class="section-title">Pricing</h2>
+  <div class="pricing-grid">
+    <div class="pricing-card">
+      <h3>Personal</h3>
+      <div class="price">Free</div>
+      <div class="period">forever</div>
+      <ul>
+        <li>Personal tracking</li>
+        <li>Basic weekly report</li>
+        <li>Efficiency scoring</li>
+      </ul>
+    </div>
+    <div class="pricing-card featured">
+      <h3>Pro</h3>
+      <div class="price">$8</div>
+      <div class="period">/ month</div>
+      <ul>
+        <li>Everything in Personal</li>
+        <li>Unlimited history</li>
+        <li>PDF export</li>
+        <li>Priority suggestions</li>
+      </ul>
+    </div>
+    <div class="pricing-card">
+      <h3>Team</h3>
+      <div class="price">$15</div>
+      <div class="period">/ person / month</div>
+      <ul>
+        <li>Everything in Pro</li>
+        <li>Team dashboard</li>
+        <li>Cross-team comparison</li>
+        <li>Admin panel</li>
+      </ul>
+    </div>
+  </div>
+  <p style="text-align:center;margin-top:1rem;">14-day free trial. No credit card required.</p>
+</section>
+
+<footer class="footer">
+  <p>UnMeet · <a href="https://github.com/bambi2008/unmeet">GitHub</a> · Built for people who value their time.</p>
+</footer>
+
+<script>
+function updateCalc() {
+  const teamSize = parseInt(document.getElementById('team-size').value);
+  const rate = parseFloat(document.getElementById('hourly-rate').value);
+  const hours = parseFloat(document.getElementById('meeting-hours').value);
+  const wastePct = parseInt(document.getElementById('waste-pct').value) / 100;
+
+  document.getElementById('team-size-val').textContent = teamSize;
+  document.getElementById('meeting-hours-val').textContent = hours + 'h';
+  document.getElementById('waste-pct-val').textContent = Math.round(wastePct * 100) + '%';
+
+  if (!teamSize || !rate || !hours || !wastePct) return;
+
+  const weeklyHoursWasted = teamSize * hours * wastePct;
+  const weeklyCost = weeklyHoursWasted * rate;
+  const monthlyCost = weeklyCost * 4.33;
+  const annualCost = weeklyCost * 52;
+  const perPersonWeekly = hours * wastePct;
+
+  document.getElementById('annual-cost').textContent =
+    '$' + Math.round(annualCost).toLocaleString();
+  document.getElementById('monthly-cost').textContent =
+    '≈ $' + Math.round(monthlyCost).toLocaleString() + ' per month';
+  document.getElementById('weekly-hours').textContent =
+    Math.round(weeklyHoursWasted) + 'h';
+  document.getElementById('per-person').textContent =
+    perPersonWeekly.toFixed(1) + 'h';
+  document.getElementById('assumptions').textContent =
+    'Based on: ' + teamSize + ' people × ' + hours + 'h/week × ' +
+    '$' + rate + '/h × ' + Math.round(wastePct*100) + '% inefficiency. ' +
+    'This is an estimate; your actual results depend on your team\'s specific patterns.';
+  document.getElementById('result').style.display = 'block';
+}
+
+updateCalc();
+</script>
 </body>
 </html>
