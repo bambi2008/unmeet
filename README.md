@@ -1,24 +1,57 @@
 # UnMeet
 
-> Measure the real cost of your meetings. Know which ones to kill.
+> Review expensive recurring meetings. Verify the time you get back.
 
-UnMeet is a Chrome extension that automatically tracks time spent in meetings, calculates the monetary cost, and helps you identify which meetings are worth your time — and which ones aren't.
+UnMeet is a meeting-governance product for 50–250 person software companies.
+It uses calendar metadata to help teams review recurring meetings, record
+decisions to shorten or cancel them, and measure the meeting hours actually
+recovered.
 
-## What it does
+The repository also contains earlier Chrome extension and Electron prototypes.
+They are not production-ready and do not yet implement the current product
+definition.
 
-- **Automatic detection** — Detects Google Meet, Zoom, Teams, Feishu, and Tencent Meeting tabs. Zero input required.
-- **Cost calculation** — Meeting cost = duration × your hourly rate. See exactly what each meeting costs you.
-- **One-tap rating** — Rate meetings 1-5 ⭐ after they end. Build a data-backed case for which meetings to skip.
-- **Weekly dashboard** — See how many hours you spent in meetings, average rating, and cost trends.
-- **100% local** — All data stored in your browser. No servers, no accounts, no tracking.
+## Prototype capabilities
 
-## Why
+- Browser-tab meeting detection for several meeting platforms.
+- Local duration tracking, hourly-rate estimates, and optional ratings.
+- An experimental Electron dashboard and meeting classifier.
+- A static landing-page cost calculator.
 
-The average knowledge worker spends **31% of meetings in unnecessary ones**. That's ~$399B in global annual waste. Existing tools (Otter, Fireflies, etc.) help you *survive* meetings — UnMeet helps you *have fewer of them*.
+These capabilities are prototypes. Team analytics, verified savings, recurring
+meeting review, production-grade privacy controls, and billing are not complete.
+
+## Current product direction
+
+The commercial product is a channel-assisted 30-day Meeting Reset, followed by
+a recurring governance subscription. English-speaking operations consultants
+lead customer reviews while UnMeet provides the audit, decision workflow, and
+verified results:
+
+1. Connect Google Workspace with read-only calendar access.
+2. Establish a recurring-meeting baseline.
+3. Rank recurring meetings by monthly person-hours invested.
+4. Assign each selected series to its owner for an explicit decision.
+5. Verify which changes actually took effect after 30 days.
+6. Continue with monthly monitoring and quarterly meeting renewal.
+
+UnMeet does not need meeting audio or transcripts for this workflow.
 
 ## Project Status
 
-🚧 **MVP in development** — Chrome extension beta targeting August 2026.
+🚧 **Commercial definition complete; product implementation in progress.** No
+public beta date is committed.
+
+The first release is intentionally limited to Google Workspace and the
+recurring-meeting review workflow. Microsoft 365, individual plans, recordings,
+and employee scoring are outside the initial scope.
+
+## Product documents
+
+- [Commercial product definition v4](./产品定义-v4-商业版.md)
+- [Product definition v3](./产品定义-v3.md)
+- [Product assessment and market opportunity](./产品评估与市场机会-2026-07.md)
+- [Earlier product definition v2](./产品定义-v2.md)
 
 ## Structure
 
@@ -35,6 +68,11 @@ unmeet/
 │   ├── options.html   # Settings page
 │   ├── options.js
 │   └── icons/
+├── desktop/           # Experimental Electron prototype
+├── privacy/           # Privacy-policy prototype
+├── 产品定义-v4-商业版.md
+├── 产品定义-v3.md
+├── 产品评估与市场机会-2026-07.md
 └── README.md
 ```
 
@@ -47,6 +85,11 @@ unmeet/
 # 3. Click "Load unpacked"
 # 4. Select the `extension/` directory
 ```
+
+The desktop prototype is not currently recommended for distribution. Its
+implementation still contains code from an abandoned recording/AI-analysis
+direction and must be aligned with the metadata-only product definition before
+testing with users.
 
 ## License
 
