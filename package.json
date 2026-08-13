@@ -1,0 +1,9 @@
+{
+  "name": "unmeet",
+  "version": "0.2.0",
+  "private": true,
+  "scripts": {
+    "start": "node team/server.js",
+    "test": "node --test app/core.test.js team/*.test.js team/connectors/*.test.js"
+  }
+}

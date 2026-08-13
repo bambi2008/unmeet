@@ -1,1 +1,4 @@
 release/*.zip
+team/*.db
+team/*.db-shm
+team/*.db-wal

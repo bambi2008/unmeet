@@ -126,6 +126,7 @@
       id: String(row.id || `series_${Date.now()}_${index}`),
       title,
       owner: String(row.owner || row.organizer || 'Unassigned'),
+      ownerEmail: String(row.ownerEmail || row.owner_email || row.organizer_email || '').trim().toLowerCase(),
       team: String(row.team || 'Product & Engineering'),
       durationMinutes: Math.max(5, number(row.durationMinutes || row.duration_minutes || row.duration, 30)),
       attendeeCount: Math.max(1, number(row.attendeeCount || row.attendee_count || row.attendees, 1)),

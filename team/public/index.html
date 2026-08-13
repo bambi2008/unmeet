@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>UnMeet Team</title>
+  <link rel="stylesheet" href="/base.css">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div id="toast" class="toast" hidden></div>
+  <main id="auth" class="auth shell" hidden>
+    <section class="brand-panel">
+      <div class="brand">UNMEET <span>TEAM</span></div>
+      <h1>Turn recurring meetings into accountable decisions.</h1>
+      <p>A shared meeting-governance workspace for leaders, delivery partners, and meeting owners—without recordings or transcripts.</p>
+      <div class="promise"><b>One source of truth</b><span>Baseline → owner decision → 30-day verification</span></div>
+    </section>
+    <section class="auth-card">
+      <form id="setup-form" hidden>
+        <p class="eyebrow">FIRST-RUN SETUP</p><h2>Create your team workspace</h2>
+        <label>Company or team<input name="workspaceName" required placeholder="Acme Software"></label>
+        <label>Your name<input name="name" required placeholder="Maya Chen"></label>
+        <label>Work email<input name="email" type="email" required placeholder="maya@acme.com"></label>
+        <label>Password<input name="password" type="password" minlength="10" required placeholder="At least 10 characters"></label>
+        <label>Blended hourly cost (USD)<input name="hourlyRate" type="number" min="1" value="75"></label>
+        <button>Create workspace</button>
+      </form>
+      <form id="login-form" hidden>
+        <p class="eyebrow">WELCOME BACK</p><h2>Sign in to UnMeet</h2>
+        <label>Work email<input name="email" type="email" required></label>
+        <label>Password<input name="password" type="password" required></label>
+        <button>Sign in</button>
+      </form>
+      <form id="invite-form" hidden>
+        <p class="eyebrow">TEAM INVITATION</p><h2 id="invite-title">Join workspace</h2>
+        <p id="invite-copy" class="muted"></p>
+        <label>Your name<input name="name" required></label>
+        <label>Password<input name="password" type="password" minlength="10" required></label>
+        <button>Accept invitation</button>
+      </form>
+    </section>
+  </main>
+
+  <div id="product" hidden>
+    <aside>
+      <div class="brand">UNMEET <span>TEAM</span></div>
+      <nav>
+        <button class="nav active" data-view="portfolio">Portfolio</button>
+        <button class="nav" data-view="results">Results</button>
+        <button class="nav" data-view="team">Team</button>
+        <button class="nav" data-view="sources">Data sources</button>
+        <button class="nav admin-only" data-view="audit">Audit log</button>
+      </nav>
+      <div class="identity"><b id="user-name"></b><span id="user-role"></span><button id="logout" class="link">Sign out</button></div>
+    </aside>
+    <main class="workspace">
+      <header><div><p class="eyebrow">30-DAY MEETING RESET</p><h1 id="workspace-name">Workspace</h1></div><button id="import-open" class="secondary editor-only">Import meetings</button></header>
+      <section id="view-portfolio" class="view">
+        <div class="metrics" id="metrics"></div>
+        <div class="section-head"><div><h2>Recurring meeting portfolio</h2><p class="muted" id="portfolio-copy"></p></div><input id="search" placeholder="Search meetings or owners"></div>
+        <div class="table-wrap"><table><thead><tr><th>Meeting</th><th>Owner</th><th>Monthly load</th><th>Status</th><th>Decision</th></tr></thead><tbody id="series-body"></tbody></table></div>
+        <div id="empty" class="empty" hidden><h3>No meetings yet</h3><p>Import a standard CSV or Tencent Meeting JSON export to create the shared baseline.</p></div>
+      </section>
+      <section id="view-results" class="view" hidden><div class="panel"><h2>Verified results</h2><p class="muted">Planned changes are kept separate from observed changes. Run a follow-up import after the review period.</p><div id="results-grid" class="metrics"></div></div></section>
+      <section id="view-team" class="view" hidden><div class="split"><div class="panel"><h2>Members</h2><div id="member-list"></div></div><form id="member-invite" class="panel admin-only"><h2>Invite a teammate</h2><label>Email<input name="email" type="email" required></label><label>Role<select name="role"><option value="meeting_owner">Meeting Owner</option><option value="executive_viewer">Executive Viewer</option><option value="delivery_partner">Delivery Partner</option><option value="admin">Admin</option></select></label><button>Generate invite link</button><div id="invite-result" class="invite-result" hidden></div></form></div></section>
+      <section id="view-sources" class="view" hidden><div class="panel"><h2>Data sources</h2><p class="muted">Calendar sources describe planned recurrence. Meeting platforms can add actual duration and attendance evidence.</p><div id="connector-list" class="connectors"></div></div></section>
+      <section id="view-audit" class="view" hidden><div class="panel"><h2>Audit log</h2><p class="muted">A server-side record of imports, invitations, and owner decisions.</p><div id="audit-list"></div></div></section>
+    </main>
+  </div>
+
+  <dialog id="import-dialog"><form id="import-form"><div class="dialog-head"><div><p class="eyebrow">SHARED DATA</p><h2>Import meetings</h2></div><button type="button" class="icon" data-close>×</button></div><label>Source<select name="provider"><option value="csv">Standard CSV</option><option value="tencent_meeting">Tencent Meeting JSON</option></select></label><label>Import purpose<select name="mode"><option value="baseline">Replace baseline</option><option value="followup">Verify follow-up period</option></select></label><label>Measurement date<input name="measuredAt" type="date"></label><label>Choose file<input name="file" type="file" accept=".csv,.json,text/csv,application/json" required></label><p class="hint">Tencent JSON accepts API responses containing <code>meeting_info_list</code> or an exported meeting array.</p><button>Import into shared workspace</button></form></dialog>
+
+  <dialog id="decision-dialog"><form id="decision-form"><div class="dialog-head"><div><p class="eyebrow">OWNER DECISION</p><h2 id="decision-title">Meeting</h2></div><button type="button" class="icon" data-close>×</button></div><input type="hidden" name="seriesId"><label>Decision<select name="action"><option value="keep">Keep as is</option><option value="shorten">Shorten</option><option value="reduce_frequency">Reduce frequency</option><option value="reduce_attendees">Reduce attendees</option><option value="async">Move async</option><option value="cancel">Cancel</option></select></label><div id="target-wrap"></div><label>Decision owner<input name="owner" required></label><div class="dates"><label>Effective date<input name="effectiveDate" type="date" required></label><label>Review date<input name="reviewDate" type="date" required></label></div><label>Rationale<textarea name="rationale" rows="3" placeholder="Why this choice is appropriate"></textarea></label><button>Save decision</button></form></dialog>
+  <script src="/shared/core.js"></script><script src="/app.js"></script>
+</body></html>

@@ -7,9 +7,24 @@ It uses calendar metadata to help teams review recurring meetings, record
 decisions to shorten or cancel them, and measure the meeting hours actually
 recovered.
 
-The repository now includes a browser-based commercial MVP that demonstrates
-the complete Meeting Reset workflow. Earlier Chrome extension and Electron
-prototypes remain for reference but are not the current product surface.
+The repository now includes a server-backed team product and an earlier
+single-user browser edition. The team product is the current product surface.
+
+## Run UnMeet Team
+
+Requires Node.js 22.5 or newer.
+
+```bash
+npm start
+```
+
+Open `http://127.0.0.1:8787`, create the first administrator, import a baseline,
+and invite meeting owners. The team edition includes shared persistence, four
+roles, invitation links, owner-scoped access, verification, and audit logs.
+Standard CSV and Tencent Meeting JSON are runnable today; other providers share
+the same connector contract but still require live customer credentials.
+
+See [the team deployment and operation guide](./team/README.md).
 
 ## Try the commercial MVP
 
@@ -24,9 +39,8 @@ node --test app/core.test.js
 
 The app is a working single-user local tool: it accepts baseline and follow-up
 periods, automatically matches recurring series, verifies observed changes,
-prints management reports, and saves/restores complete project files. Google
-Workspace OAuth, multi-tenant collaboration, billing, and server-side audit
-logs remain outside this local release.
+prints management reports, and saves/restores complete project files. For team
+use, run the server-backed edition above.
 
 ## Prototype capabilities
 
@@ -45,7 +59,7 @@ a recurring governance subscription. English-speaking operations consultants
 lead customer reviews while UnMeet provides the audit, decision workflow, and
 verified results:
 
-1. Connect Google Workspace with read-only calendar access.
+1. Import a calendar or meeting-platform data source with minimum permissions.
 2. Establish a recurring-meeting baseline.
 3. Rank recurring meetings by monthly person-hours invested.
 4. Assign each selected series to its owner for an explicit decision.
@@ -56,12 +70,9 @@ UnMeet does not need meeting audio or transcripts for this workflow.
 
 ## Project Status
 
-🚧 **Commercial definition complete; product implementation in progress.** No
-public beta date is committed.
-
-The first release is intentionally limited to Google Workspace and the
-recurring-meeting review workflow. Microsoft 365, individual plans, recordings,
-and employee scoring are outside the initial scope.
+🚧 **Runnable team beta.** Core collaboration is implemented. Direct OAuth/API
+sync, enterprise SSO, managed cloud operations, billing, and multi-instance
+database deployment remain production work.
 
 ## Product documents
 
@@ -82,6 +93,11 @@ unmeet/
 │   ├── core.js
 │   ├── core.test.js
 │   └── styles.css
+├── team/              # Server-backed team edition
+│   ├── public/        # Shared team workspace UI
+│   ├── connectors/    # CSV and Tencent Meeting adapters
+│   ├── db.js          # Roles, persistence, invitations, audit
+│   └── server.js      # HTTP API and static server
 ├── extension/         # Chrome extension (Manifest V3)
 │   ├── manifest.json
 │   ├── background.js  # Service worker — time tracking engine
