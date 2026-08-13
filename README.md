@@ -7,7 +7,7 @@ It uses calendar metadata to help teams review recurring meetings, record
 decisions to shorten or cancel them, and measure the meeting hours actually
 recovered.
 
-The repository now includes a server-backed team product and an earlier
+The repository now includes a multi-tenant SaaS product and an earlier
 single-user browser edition. The team product is the current product surface.
 
 ## Run UnMeet Team
@@ -19,8 +19,9 @@ npm start
 ```
 
 Open `http://127.0.0.1:8787`, create the first administrator, import a baseline,
-and invite meeting owners. The team edition includes shared persistence, four
-roles, invitation links, owner-scoped access, verification, and audit logs.
+and invite meeting owners. The SaaS edition includes multiple isolated customer
+workspaces per account, four roles, subscription plans, invitation email,
+owner-scoped access, verification, export/deletion controls, and audit logs.
 Standard CSV and Tencent Meeting JSON are runnable today; other providers share
 the same connector contract but still require live customer credentials.
 
@@ -70,9 +71,10 @@ UnMeet does not need meeting audio or transcripts for this workflow.
 
 ## Project Status
 
-🚧 **Runnable team beta.** Core collaboration is implemented. Direct OAuth/API
-sync, enterprise SSO, managed cloud operations, billing, and multi-instance
-database deployment remain production work.
+🚧 **Runnable SaaS beta.** Multi-tenancy, trial limits, Stripe Checkout/Portal,
+signed webhooks, transactional invitation email, and data controls are
+implemented. Direct calendar OAuth/API sync, enterprise SSO, managed cloud
+operations, and multi-instance Postgres deployment remain production work.
 
 ## Product documents
 
@@ -96,7 +98,7 @@ unmeet/
 ├── team/              # Server-backed team edition
 │   ├── public/        # Shared team workspace UI
 │   ├── connectors/    # CSV and Tencent Meeting adapters
-│   ├── db.js          # Roles, persistence, invitations, audit
+│   ├── saas-db.js     # Accounts, tenants, roles, plans, audit
 │   └── server.js      # HTTP API and static server
 ├── extension/         # Chrome extension (Manifest V3)
 │   ├── manifest.json

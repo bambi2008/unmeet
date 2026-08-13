@@ -2,6 +2,8 @@ const $ = selector => document.querySelector(selector);
 const $$ = selector => [...document.querySelectorAll(selector)];
 let session = null;
 let data = null;
+let accountWorkspaces = [];
+let appStatus = null;
 
 async function request(url, options = {}) {
   const response = await fetch(url, { headers: { 'Content-Type': 'application/json', ...(options.headers || {}) }, ...options });
@@ -17,10 +19,11 @@ function dateAfter(days) { const d = new Date(Date.now() + days * 86400000); ret
 async function boot() {
   const token = new URLSearchParams(location.search).get('invite');
   if (token) return showInvite(token);
-  const status = await request('/api/status');
-  try { session = (await request('/api/session')).user; return showProduct(); } catch {}
+  appStatus = await request('/api/status');
+  try { const response = await request('/api/session'); session = response.user; accountWorkspaces = response.workspaces; return showProduct(); } catch {}
   $('#auth').hidden = false;
-  $(status.setupRequired ? '#setup-form' : '#login-form').hidden = false;
+  $('#register-form').hidden = !appStatus.registrationOpen;
+  $('#login-form').hidden = appStatus.registrationOpen;
 }
 
 async function showInvite(token) {
@@ -35,14 +38,31 @@ async function showProduct() {
   const isAdmin = ['admin', 'delivery_partner'].includes(session.role);
   $$('.admin-only').forEach(el => { el.hidden = !isAdmin; });
   $$('.editor-only').forEach(el => { el.hidden = !isAdmin; });
+  await loadAccountWorkspaces();
   await refresh();
+}
+
+async function loadAccountWorkspaces() {
+  const response = await request('/api/session'); session = response.user; accountWorkspaces = response.workspaces;
+  const select = $('#workspace-switch'); select.innerHTML = accountWorkspaces.map(ws => `<option value="${ws.id}"${ws.id === session.workspaceId ? ' selected' : ''}>${escapeHtml(ws.name)} · ${roleLabel(ws.role)}</option>`).join('');
 }
 
 async function refresh() {
   const response = await request('/api/workspace'); data = response;
   $('#workspace-name').textContent = response.workspace.name;
   renderMetrics(response.metrics); renderSeries(response.workspace.series); renderResults(response.metrics);
+  renderSaas(response.workspace);
   $('#portfolio-copy').textContent = session.role === 'meeting_owner' ? 'Meetings assigned to your email.' : `${response.workspace.series.length} meeting series across the workspace.`;
+}
+
+function renderSaas(workspace) {
+  $('#plan-name').textContent = workspace.limits.name;
+  const trial = workspace.subscriptionStatus === 'trialing' ? ` · trial ends ${new Date(workspace.trialEndsAt).toLocaleDateString()}` : '';
+  $('#plan-status').textContent = `${workspace.subscriptionStatus}${trial}`;
+  $('#usage').innerHTML = `<div><b>${workspace.usage.members} / ${workspace.limits.memberLimit}</b><span>members</span></div><div><b>${workspace.usage.series} / ${workspace.limits.seriesLimit}</b><span>meeting series</span></div>`;
+  $('#billing-manage').hidden = !workspace.stripeCustomerId;
+  $('#billing-note').textContent = appStatus?.billingConfigured ? 'Payments are handled securely by Stripe.' : 'Stripe environment variables are not configured. Trial mode remains available.';
+  const form = $('#settings-form'); form.name.value = workspace.name; form.hourlyRate.value = workspace.hourlyRate; form.timezone.value = workspace.timezone; form.currency.value = workspace.currency;
 }
 
 function renderMetrics(m) {
@@ -87,7 +107,8 @@ async function loadMembers() { const { members } = await request('/api/members')
 async function loadSources() { const { connectors } = await request('/api/connectors'); $('#connector-list').innerHTML = connectors.map(c => `<div class="connector"><div><b>${c.name}</b><span>${c.capabilities.join(' · ')}${c.note ? ` — ${c.note}` : ''}</span></div><span class="pill status ${c.ready ? '' : 'backlog'}">${c.ready ? 'Ready' : 'Adapter ready'}</span></div>`).join(''); }
 async function loadAudit() { if (!['admin','delivery_partner'].includes(session.role)) return; const { logs } = await request('/api/audit'); $('#audit-list').innerHTML = logs.map(log => `<div class="audit"><div><b>${log.action}</b><br><span>${escapeHtml(log.userName)} · ${log.entityType}</span></div><span>${new Date(log.createdAt).toLocaleString()}</span></div>`).join('') || '<p class="muted">No activity yet.</p>'; }
 
-$('#setup-form').addEventListener('submit', async event => { event.preventDefault(); try { session = (await request('/api/setup', { method:'POST', body:JSON.stringify(formData(event.target)) })).user; await showProduct(); } catch(e){ toast(e.message,true); } });
+$('#register-form').addEventListener('submit', async event => { event.preventDefault(); try { session = (await request('/api/register', { method:'POST', body:JSON.stringify(formData(event.target)) })).user; await showProduct(); } catch(e){ toast(e.message,true); } });
+$$('.auth-toggle').forEach(button => button.addEventListener('click', () => { $('#register-form').hidden = button.dataset.auth !== 'register'; $('#login-form').hidden = button.dataset.auth !== 'login'; }));
 $('#login-form').addEventListener('submit', async event => { event.preventDefault(); try { session = (await request('/api/login', { method:'POST', body:JSON.stringify(formData(event.target)) })).user; await showProduct(); } catch(e){ toast(e.message,true); } });
 $('#invite-form').addEventListener('submit', async event => { event.preventDefault(); try { session = (await request(`/api/invites/${event.target.dataset.token}`, { method:'POST', body:JSON.stringify(formData(event.target)) })).user; history.replaceState({},'', '/'); await showProduct(); } catch(e){ toast(e.message,true); } });
 $('#logout').addEventListener('click', async () => { await request('/api/logout',{method:'POST'}); location.reload(); });
@@ -98,5 +119,13 @@ $$('[data-close]').forEach(button => button.addEventListener('click', () => butt
 $('#decision-form').action.addEventListener('change', () => renderTarget(data.workspace.series.find(i => i.id === $('#decision-form').seriesId.value)));
 $('#decision-form').addEventListener('submit', async event => { event.preventDefault(); const values=formData(event.target); const id=values.seriesId; delete values.seriesId; ['targetDuration','targetOccurrences','targetAttendees'].forEach(k=>{if(values[k])values[k]=Number(values[k]);}); try{await request(`/api/series/${id}/decision`,{method:'PATCH',body:JSON.stringify(values)}); $('#decision-dialog').close(); toast('Decision saved and logged.'); await refresh();}catch(e){toast(e.message,true);} });
 $('#import-form').addEventListener('submit', async event => { event.preventDefault(); const values=formData(event.target); const file=event.target.file.files[0]; try { const text=await file.text(); const payload=values.provider==='csv'?text:JSON.parse(text); const result=await request('/api/import',{method:'POST',body:JSON.stringify({provider:values.provider,mode:values.mode,measuredAt:values.measuredAt,payload})}); $('#import-dialog').close(); toast(result.summary ? `Verification complete: ${result.summary.matched} matched.` : `${result.imported} series imported.`); await refresh(); } catch(e){toast(e.message,true);} });
-$('#member-invite').addEventListener('submit', async event => { event.preventDefault(); try { const {inviteUrl}=await request('/api/invites',{method:'POST',body:JSON.stringify(formData(event.target))}); const result=$('#invite-result'); result.hidden=false; result.textContent=inviteUrl; await navigator.clipboard?.writeText(inviteUrl); toast('Invite link generated.'); }catch(e){toast(e.message,true);} });
+$('#member-invite').addEventListener('submit', async event => { event.preventDefault(); try { const {inviteUrl,delivery}=await request('/api/invites',{method:'POST',body:JSON.stringify(formData(event.target))}); const result=$('#invite-result'); result.hidden=false; result.textContent=delivery.sent ? `Invitation emailed. Backup link: ${inviteUrl}` : `Copy this invitation link: ${inviteUrl}`; await navigator.clipboard?.writeText(inviteUrl); toast(delivery.sent ? 'Invitation emailed.' : 'Invite link generated.'); }catch(e){toast(e.message,true);} });
+$('#workspace-switch').addEventListener('change', async event => { try { session = (await request(`/api/workspaces/${event.target.value}/switch`, {method:'POST'})).user; location.reload(); } catch(e){toast(e.message,true);} });
+$('#workspace-add').addEventListener('click', () => $('#workspace-dialog').showModal());
+$('#workspace-form').addEventListener('submit', async event => { event.preventDefault(); try { session=(await request('/api/workspaces',{method:'POST',body:JSON.stringify(formData(event.target))})).user; location.reload(); } catch(e){toast(e.message,true);} });
+$('#settings-form').addEventListener('submit', async event => { event.preventDefault(); try { await request('/api/workspace/settings',{method:'PATCH',body:JSON.stringify(formData(event.target))}); toast('Workspace settings saved.'); await loadAccountWorkspaces(); await refresh(); } catch(e){toast(e.message,true);} });
+$$('.checkout').forEach(button => button.addEventListener('click', async () => { try { const {url}=await request('/api/billing/checkout',{method:'POST',body:JSON.stringify({plan:button.dataset.plan})}); location.href=url; } catch(e){toast(e.message,true);} }));
+$('#billing-manage').addEventListener('click', async () => { try { const {url}=await request('/api/billing/portal',{method:'POST'}); location.href=url; } catch(e){toast(e.message,true);} });
+$('#export-workspace').addEventListener('click', async () => { try { const exported=await request('/api/workspace/export'); const blob=new Blob([JSON.stringify(exported,null,2)],{type:'application/json'}); const link=document.createElement('a'); link.href=URL.createObjectURL(blob); link.download=`unmeet-${data.workspace.slug}-export.json`; link.click(); URL.revokeObjectURL(link.href); } catch(e){toast(e.message,true);} });
+$('#delete-workspace').addEventListener('click', async () => { try { await request('/api/workspace',{method:'DELETE',body:JSON.stringify({confirmation:$('#delete-confirmation').value})}); location.reload(); } catch(e){toast(e.message,true);} });
 boot().catch(error => toast(error.message, true));

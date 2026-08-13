@@ -11,6 +11,7 @@ const { server } = require('./server');
 let base;
 let adminCookie;
 let ownerCookie;
+let primaryWorkspaceId;
 
 async function call(pathname, options = {}, cookie = adminCookie) {
   const response = await fetch(`${base}${pathname}`, { ...options, headers: { 'Content-Type': 'application/json', ...(cookie ? { Cookie: cookie } : {}), ...(options.headers || {}) } });
@@ -25,11 +26,13 @@ test.before(async () => {
 test.after(async () => { await new Promise(resolve => server.close(resolve)); fs.rmSync(temp, { recursive: true, force: true }); });
 
 test('initializes a team workspace and authenticated session', async () => {
-  const result = await call('/api/setup', { method: 'POST', body: JSON.stringify({ workspaceName: 'Acme', name: 'Admin', email: 'admin@acme.test', password: 'very-secure-password', hourlyRate: 80 }) }, null);
+  const result = await call('/api/register', { method: 'POST', body: JSON.stringify({ workspaceName: 'Acme', name: 'Admin', email: 'admin@acme.test', password: 'very-secure-password', hourlyRate: 80, timezone: 'America/New_York' }) }, null);
   assert.equal(result.response.status, 201);
   adminCookie = result.cookie;
   const workspace = await call('/api/workspace');
   assert.equal(workspace.body.workspace.name, 'Acme');
+  assert.equal(workspace.body.workspace.plan, 'trial');
+  primaryWorkspaceId = workspace.body.workspace.id;
 });
 
 test('imports shared baseline and creates a meeting-owner invitation', async () => {
@@ -52,4 +55,26 @@ test('meeting owner sees and changes only assigned meetings', async () => {
   assert.equal(decision.response.status, 200);
   const audit = await call('/api/audit');
   assert.ok(audit.body.logs.some(log => log.action === 'decision.updated'));
+});
+
+test('one account can create and switch between isolated customer workspaces', async () => {
+  const created = await call('/api/workspaces', { method: 'POST', body: JSON.stringify({ workspaceName: 'Beta Client', hourlyRate: 95, timezone: 'Europe/London', currency: 'GBP' }) });
+  assert.equal(created.response.status, 201);
+  const second = await call('/api/workspace');
+  assert.equal(second.body.workspace.name, 'Beta Client');
+  assert.equal(second.body.workspace.series.length, 0);
+  const session = await call('/api/session');
+  assert.equal(session.body.workspaces.length, 2);
+  const switched = await call(`/api/workspaces/${primaryWorkspaceId}/switch`, { method: 'POST' });
+  assert.equal(switched.body.user.workspaceId, primaryWorkspaceId);
+  const primary = await call('/api/workspace');
+  assert.equal(primary.body.workspace.series.length, 2);
+});
+
+test('administrator can update and export the active workspace', async () => {
+  const updated = await call('/api/workspace/settings', { method: 'PATCH', body: JSON.stringify({ name: 'Acme Global', hourlyRate: 88, timezone: 'UTC', currency: 'USD' }) });
+  assert.equal(updated.body.workspace.name, 'Acme Global');
+  const exported = await call('/api/workspace/export');
+  assert.equal(exported.body.workspace.name, 'Acme Global');
+  assert.equal(exported.body.series.length, 2);
 });
