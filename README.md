@@ -21,9 +21,10 @@ npm start
 Open `http://127.0.0.1:8787`, create the first administrator, import a baseline,
 and invite meeting owners. The SaaS edition includes multiple isolated customer
 workspaces per account, four roles, subscription plans, invitation email,
-owner-scoped access, verification, export/deletion controls, and audit logs.
-Standard CSV and Tencent Meeting JSON are runnable today; other providers share
-the same connector contract but still require live customer credentials.
+owner-scoped access, email/password recovery, session controls, export/hard
+deletion, and audit logs. Standard CSV and Tencent Meeting JSON work directly;
+Google Workspace and Microsoft 365 provide read-only OAuth calendar sync when
+the operator configures the corresponding application credentials.
 
 See [the team deployment and operation guide](./team/README.md).
 
@@ -71,10 +72,15 @@ UnMeet does not need meeting audio or transcripts for this workflow.
 
 ## Project Status
 
-🚧 **Runnable SaaS beta.** Multi-tenancy, trial limits, Stripe Checkout/Portal,
-signed webhooks, transactional invitation email, and data controls are
-implemented. Direct calendar OAuth/API sync, enterprise SSO, managed cloud
-operations, and multi-instance Postgres deployment remain production work.
+**Deployable single-instance SaaS release.** Multi-tenancy, calendar sync,
+account and member lifecycle, transactional email, encrypted connector secrets,
+data controls, backups, CI, and operating/legal templates are implemented.
+Online payment is intentionally disabled. Enterprise SSO/SCIM, active-active
+hosting, and managed Postgres remain explicit enterprise-scale work.
+
+The repository release evidence is recorded in
+[`ops/RELEASE_EVIDENCE.md`](./ops/RELEASE_EVIDENCE.md); deployment-specific
+operator gates remain in [`ops/LAUNCH_CHECKLIST.md`](./ops/LAUNCH_CHECKLIST.md).
 
 ## Product documents
 

@@ -1,0 +1,32 @@
+services:
+  unmeet:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - unmeet-data:/data
+    expose:
+      - "8787"
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+  caddy:
+    image: caddy:2.10.2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      UNMEET_DOMAIN: ${UNMEET_DOMAIN}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+    depends_on:
+      - unmeet
+volumes:
+  unmeet-data:
+  caddy-data:

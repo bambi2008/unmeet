@@ -2,3 +2,12 @@ release/*.zip
 team/*.db
 team/*.db-shm
 team/*.db-wal
+.env
+.env.*
+!.env.example
+backups/
+*.log
+node_modules/
+desktop/node_modules/
+desktop/release/
+.DS_Store

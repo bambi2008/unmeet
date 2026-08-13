@@ -78,3 +78,31 @@ test('administrator can update and export the active workspace', async () => {
   assert.equal(exported.body.workspace.name, 'Acme Global');
   assert.equal(exported.body.series.length, 2);
 });
+
+test('supports password recovery without account enumeration', async () => {
+  const known=await call('/api/password/forgot',{method:'POST',body:JSON.stringify({email:'admin@acme.test'})},null);
+  const unknown=await call('/api/password/forgot',{method:'POST',body:JSON.stringify({email:'nobody@acme.test'})},null);
+  assert.equal(known.response.status,202);assert.equal(unknown.response.status,202);assert.deepEqual(known.body,unknown.body);
+});
+
+test('lists sessions and requires a valid password for recent authentication', async () => {
+  const sessions=await call('/api/account/sessions');assert.ok(sessions.body.sessions.some(item=>item.current));
+  const denied=await call('/api/account/reauth',{method:'POST',body:JSON.stringify({password:'wrong-password'})});assert.equal(denied.response.status,401);
+  const accepted=await call('/api/account/reauth',{method:'POST',body:JSON.stringify({password:'very-secure-password'})});assert.equal(accepted.response.status,200);
+});
+
+test('hard-deletes a workspace and returns a non-identifying receipt', async () => {
+  const created=await call('/api/workspaces',{method:'POST',body:JSON.stringify({workspaceName:'Disposable',hourlyRate:75,timezone:'UTC',currency:'USD'})});assert.equal(created.response.status,201);
+  await call('/api/account/reauth',{method:'POST',body:JSON.stringify({password:'very-secure-password'})});
+  const removed=await call('/api/workspace',{method:'DELETE',body:JSON.stringify({confirmation:'Disposable'})});assert.equal(removed.response.status,200);assert.match(removed.body.receiptId,/^del_/);
+});
+
+test('applies an IP-wide authentication ceiling even when emails rotate', async () => {
+  process.env.UNMEET_TRUST_PROXY='true';process.env.UNMEET_AUTH_IP_LIMIT='2';
+  const headers={'X-Forwarded-For':'203.0.113.77'};
+  const first=await call('/api/login',{method:'POST',headers,body:JSON.stringify({email:'rotate-1@example.test',password:'not-the-password'})},null);
+  const second=await call('/api/login',{method:'POST',headers,body:JSON.stringify({email:'rotate-2@example.test',password:'not-the-password'})},null);
+  const third=await call('/api/login',{method:'POST',headers,body:JSON.stringify({email:'rotate-3@example.test',password:'not-the-password'})},null);
+  assert.equal(first.response.status,401);assert.equal(second.response.status,401);assert.equal(third.response.status,429);
+  delete process.env.UNMEET_TRUST_PROXY;delete process.env.UNMEET_AUTH_IP_LIMIT;
+});

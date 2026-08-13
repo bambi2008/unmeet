@@ -265,12 +265,22 @@
     if (decision?.action === 'shorten' && number(decision.targetDuration) >= number(series.durationMinutes)) {
       errors.push('The target duration must be shorter than the baseline.');
     }
+    if (decision?.action === 'shorten' && (!Number.isInteger(Number(decision.targetDuration)) || Number(decision.targetDuration) < 5)) {
+      errors.push('The target duration must be a whole number of at least 5 minutes.');
+    }
     if (decision?.action === 'reduce_frequency' && number(decision.targetOccurrences) >= number(series.occurrencesPerMonth)) {
       errors.push('The target cadence must be lower than the baseline.');
+    }
+    if (decision?.action === 'reduce_frequency' && (!Number.isFinite(Number(decision.targetOccurrences)) || Number(decision.targetOccurrences) < 0)) {
+      errors.push('The target cadence must be zero or greater.');
     }
     if (decision?.action === 'reduce_attendees' && number(decision.targetAttendees) >= number(series.attendeeCount)) {
       errors.push('The target attendee count must be lower than the baseline.');
     }
+    if (decision?.action === 'reduce_attendees' && (!Number.isInteger(Number(decision.targetAttendees)) || Number(decision.targetAttendees) < 1)) {
+      errors.push('The target attendee count must be a whole number of at least 1.');
+    }
+    if (decision?.effectiveDate && decision?.reviewDate && decision.reviewDate <= decision.effectiveDate) errors.push('The review date must be after the effective date.');
     return errors;
   }
 

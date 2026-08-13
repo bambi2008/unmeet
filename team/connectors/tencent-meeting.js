@@ -27,36 +27,34 @@ function identity(row) {
 function normalize(payload) {
   const rows = listFrom(payload);
   if (!rows.length) throw new Error('No Tencent Meeting records were found. Expected meeting_info_list or meetings.');
+  if (rows.length > 5000) throw new Error('Tencent Meeting import may contain at most 5,000 records.');
   const groups = new Map();
   rows.forEach((row, index) => {
+    if (!row || typeof row !== 'object' || Array.isArray(row)) throw new Error(`Tencent Meeting record ${index + 1} is invalid.`);
     const key = identity(row);
     const ownerObject = row.hosts?.[0] || row.host_info || {};
-    const current = groups.get(key) || { key, rows: [], index };
-    current.rows.push({
-      row,
-      title: row.subject || row.title || row.meeting_name || `Tencent Meeting ${index + 1}`,
-      owner: row.owner || row.creator_name || ownerObject.nick_name || ownerObject.username || row.host_user_id || 'Unassigned',
-      ownerEmail: row.owner_email || row.organizer_email || ownerObject.email || '',
-      duration: durationMinutes(row),
-      attendees: Number(row.attendee_count || row.participant_count || row.online_member_num || row.participants?.length || 1),
-    });
+    const title = String(row.subject || row.title || row.meeting_name || `Tencent Meeting ${index + 1}`).slice(0, 500);
+    const owner = String(row.owner || row.creator_name || ownerObject.nick_name || ownerObject.username || row.host_user_id || 'Unassigned').slice(0, 200);
+    const ownerEmail = String(row.owner_email || row.organizer_email || ownerObject.email || '').slice(0, 320);
+    const current = groups.get(key) || { key, first: row, title, owner, ownerEmail, durationTotal: 0, attendeeTotal: 0, count: 0, index };
+    current.durationTotal += Math.max(0, durationMinutes(row));
+    current.attendeeTotal += Math.max(1, Number(row.attendee_count || row.participant_count || row.online_member_num || row.participants?.length || 1));
+    current.count += 1;
     groups.set(key, current);
   });
 
   return [...groups.values()].map((group, index) => {
-    const first = group.rows[0];
-    const avg = field => Math.round(group.rows.reduce((sum, item) => sum + Number(item[field] || 0), 0) / group.rows.length);
     return Core.normalizeSeries({
       id: `tencent_${group.key}`,
-      title: first.title,
-      owner: first.owner,
-      owner_email: first.ownerEmail,
-      team: first.row.department || first.row.team || 'Unassigned',
-      duration_minutes: avg('duration'),
-      attendee_count: Math.max(1, avg('attendees')),
-      occurrences_per_month: group.rows.length,
-      has_agenda: first.row.has_agenda ?? true,
-      age_months: first.row.age_months || 1,
+      title: group.title,
+      owner: group.owner,
+      owner_email: group.ownerEmail,
+      team: group.first.department || group.first.team || 'Unassigned',
+      duration_minutes: Math.round(group.durationTotal / group.count),
+      attendee_count: Math.round(group.attendeeTotal / group.count),
+      occurrences_per_month: group.count,
+      has_agenda: group.first.has_agenda ?? true,
+      age_months: group.first.age_months || 1,
     }, index);
   });
 }

@@ -36,10 +36,11 @@ and reverse-proxy rate limits are required.
 - Tenant-scoped data, roles, sessions, meeting portfolios, and audit logs.
 - Workspace switching for consultants serving multiple clients.
 - 14-day trials and enforced member/meeting-series plan limits.
-- Stripe-hosted subscription Checkout and Customer Portal.
-- Signed, replay-safe Stripe webhook processing from the unmodified request body.
-- Optional Resend invitation email delivery with copyable-link fallback.
-- Workspace usage, settings, full JSON export, and confirmed deletion.
+- Online payment is disabled by default for invoice/order-form sales.
+- Resend email verification, invitations, and password recovery. Production
+  never returns bearer invitation/reset tokens in an API response.
+- Workspace usage, settings, recent-authenticated JSON export, and transactional
+  hard deletion with a non-identifying receipt.
 - Health endpoint at `/api/health`.
 
 ## Roles
@@ -56,8 +57,11 @@ and reverse-proxy rate limits are required.
   `meeting_info_list`, `meetings`, `meeting_list`, or a raw meeting array. The
   adapter groups occurrences by recurring ID or meeting identity. See
   `sample-tencent-meeting.json`.
-- **Google Workspace, Microsoft 365 / Teams, Feishu, Zoom — connector contracts
-  registered:** live authorization still requires customer-specific credentials.
+- **Google Workspace — ready:** read-only OAuth sync of the connected user's
+  primary calendar, with encrypted refresh tokens and six-hour scheduled sync.
+- **Microsoft 365 / Teams — ready:** read-only OAuth sync of the connected user's
+  calendar through Microsoft Graph, with the same encryption and scheduling.
+- **Feishu and Zoom — planned:** shown as roadmap connectors, not functioning ones.
 
 Tencent Meeting provides meeting-platform evidence. For a complete view that
 also includes in-person meetings or meetings hosted elsewhere, combine it with
@@ -69,29 +73,33 @@ The included `sample-baseline.csv`, `sample-followup.csv`, and
 ## Security boundary
 
 Passwords use `scrypt` with a unique salt. Session and invitation tokens are
-stored as SHA-256 hashes. Sessions use HttpOnly, SameSite=Strict cookies;
+stored as SHA-256 hashes. OAuth tokens use authenticated encryption. Sessions
+use HttpOnly, SameSite=Strict, Secure production cookies with idle and absolute expiry;
 mutations reject cross-origin browser requests; responses include restrictive
 content and framing headers. Every import, invite, join, and decision is written
 to the server-side audit log.
 
-Before production use, deploy behind HTTPS, back up the database, and set access
-logs and rate limits at the reverse proxy. The included SQLite deployment is
+Before production use, complete every external gate in
+[`ops/LAUNCH_CHECKLIST.md`](../ops/LAUNCH_CHECKLIST.md). The included SQLite deployment is
 suitable for a first single-instance SaaS. Move persistence to managed Postgres
 before horizontal scaling or enterprise availability commitments.
 
-## Billing setup
+Backups intentionally omit sessions, reset/verification tokens, pending OAuth
+state, and calendar credentials. After a restore, users sign in again and an
+administrator reconnects calendar sources. This prevents retained backups from
+silently restoring third-party access after deletion or disconnect.
 
-Create recurring Starter and Team Prices in Stripe, then set
-`STRIPE_SECRET_KEY`, `STRIPE_PRICE_STARTER`, and `STRIPE_PRICE_TEAM`. Register
-`POST /api/webhooks/stripe` as the webhook endpoint and set its signing secret as
-`STRIPE_WEBHOOK_SECRET`. Subscribe to `checkout.session.completed` and
-`customer.subscription.updated/deleted`.
+## Billing
+
+Keep `UNMEET_ENABLE_BILLING=false`. The first commercial release is sold by
+order form and invoice; live online payment is intentionally outside this scope.
 
 ## Email setup
 
 Verify a sending domain with Resend and set `RESEND_API_KEY` and
-`UNMEET_FROM_EMAIL`. When they are missing or delivery fails, the workspace still
-returns a 72-hour invitation link that an administrator can copy.
+`UNMEET_FROM_EMAIL`. Production startup rejects open signup without working
+email configuration. Local development returns verification/invitation links
+for testing; production never exposes those bearer tokens.
 
 ## Test
 
