@@ -67,13 +67,14 @@
     return 'backlog';
   }
 
-  function opportunityScore(series) {
-    const hours = monthlyPersonHours(series);
-    const recurringWeight = Math.min(number(series.occurrencesPerMonth) / 4, 2);
-    const attendeeWeight = Math.min(number(series.attendeeCount) / 8, 2);
-    const noAgenda = series.hasAgenda === false ? 8 : 0;
-    const ageWeight = Math.min(number(series.ageMonths) / 6, 3);
-    return Math.round(hours + recurringWeight * 8 + attendeeWeight * 6 + noAgenda + ageWeight * 4);
+  function opportunityReasons(series) {
+    const reasons = [`${monthlyPersonHours(series)} person-hours/month`];
+    if (series.occurrencesPerMonth >= 8) reasons.push(`${series.occurrencesPerMonth} occurrences/month`);
+    if (series.attendeeCount >= 12) reasons.push(`${series.attendeeCount} attendees`);
+    if (series.durationMinutes >= 60) reasons.push(`${series.durationMinutes}-minute timebox`);
+    if (series.hasAgenda === false) reasons.push('no agenda indicated');
+    if (series.ageMonths >= 12) reasons.push(`${series.ageMonths} months old`);
+    return reasons;
   }
 
   function recommendation(series) {
@@ -89,6 +90,9 @@
     const baselineHours = round(series.reduce((sum, item) => sum + monthlyPersonHours(item), 0), 1);
     const plannedSavings = round(series.reduce((sum, item) => sum + (item.decision ? savings(item, 'planned') : 0), 0), 1);
     const verifiedSavings = round(series.reduce((sum, item) => sum + (item.actual ? savings(item, 'actual') : 0), 0), 1);
+    const increasedHours = round(series.reduce((sum, item) => item.actual ? sum + Math.max(0, monthlyPersonHours(item, 'actual') - monthlyPersonHours(item)) : sum, 0), 1);
+    const currentHours = round(series.reduce((sum, item) => sum + (item.actual ? monthlyPersonHours(item, 'actual') : monthlyPersonHours(item)), 0), 1);
+    const verifiedNetChange = round(baselineHours - currentHours, 1);
     const reviewed = series.filter(item => reviewStatus(item) !== 'backlog').length;
     const decided = series.filter(item => item.decision).length;
     const verified = series.filter(item => item.actual && item.decision).length;
@@ -99,6 +103,12 @@
       plannedSavingsCost: Math.round(plannedSavings * number(workspace.hourlyRate, 75)),
       verifiedSavings,
       verifiedSavingsCost: Math.round(verifiedSavings * number(workspace.hourlyRate, 75)),
+      increasedHours,
+      increasedCost: Math.round(increasedHours * number(workspace.hourlyRate, 75)),
+      currentHours,
+      currentCost: Math.round(currentHours * number(workspace.hourlyRate, 75)),
+      verifiedNetChange,
+      verifiedNetChangeCost: Math.round(verifiedNetChange * number(workspace.hourlyRate, 75)),
       reviewed,
       decided,
       verified,
@@ -126,6 +136,85 @@
       decision: row.decision || null,
       actual: row.actual || null,
     };
+  }
+
+  function normalizeText(value) {
+    return String(value || '')
+      .toLowerCase()
+      .normalize('NFKD')
+      .replace(/[^a-z0-9]+/g, ' ')
+      .trim();
+  }
+
+  function matchFollowupSeries(baseline, followupRows) {
+    const title = normalizeText(baseline.title);
+    const owner = normalizeText(baseline.owner);
+    const exact = followupRows.filter(row => normalizeText(row.title) === title && normalizeText(row.owner) === owner);
+    if (exact.length === 1) return { row: exact[0], confidence: 'high', method: 'title_and_owner' };
+    const titleMatches = followupRows.filter(row => normalizeText(row.title) === title);
+    if (titleMatches.length === 1) return { row: titleMatches[0], confidence: 'medium', method: 'title_only' };
+    return { row: null, confidence: titleMatches.length > 1 ? 'ambiguous' : 'none', method: titleMatches.length > 1 ? 'multiple_title_matches' : 'not_found' };
+  }
+
+  function applyFollowup(workspace, followupRows, measuredAt = new Date().toISOString().slice(0, 10)) {
+    const usedIds = new Set();
+    const matches = [];
+    const series = (workspace.series || []).map(item => {
+      const result = matchFollowupSeries(item, followupRows.filter(row => !usedIds.has(row.id)));
+      const copy = { ...item };
+      if (result.row) {
+        usedIds.add(result.row.id);
+        copy.actual = {
+          durationMinutes: result.row.durationMinutes,
+          attendeeCount: result.row.attendeeCount,
+          occurrencesPerMonth: result.row.occurrencesPerMonth,
+          measuredAt,
+          confidence: result.confidence,
+          matchMethod: result.method,
+          sourceTitle: result.row.title,
+          verified: true,
+        };
+        matches.push({ baselineId: item.id, followupId: result.row.id, title: item.title, confidence: result.confidence, method: result.method, status: 'matched' });
+      } else if (item.decision && ['cancel', 'async'].includes(item.decision.action) && result.confidence === 'none') {
+        copy.actual = {
+          durationMinutes: 0,
+          attendeeCount: 0,
+          occurrencesPerMonth: 0,
+          measuredAt,
+          confidence: 'medium',
+          matchMethod: 'expected_absence',
+          sourceTitle: null,
+          verified: true,
+        };
+        matches.push({ baselineId: item.id, followupId: null, title: item.title, confidence: 'medium', method: 'expected_absence', status: 'verified_absent' });
+      } else {
+        copy.actual = null;
+        matches.push({ baselineId: item.id, followupId: null, title: item.title, confidence: result.confidence, method: result.method, status: result.confidence === 'ambiguous' ? 'ambiguous' : 'missing' });
+      }
+      return copy;
+    });
+    const unmatchedFollowup = followupRows.filter(row => !usedIds.has(row.id));
+    return {
+      workspace: { ...workspace, series, followup: { importedAt: new Date().toISOString(), measuredAt, rowCount: followupRows.length } },
+      summary: {
+        matched: matches.filter(item => item.status === 'matched').length,
+        verifiedAbsent: matches.filter(item => item.status === 'verified_absent').length,
+        missing: matches.filter(item => item.status === 'missing').length,
+        ambiguous: matches.filter(item => item.status === 'ambiguous').length,
+        unmatchedFollowup: unmatchedFollowup.length,
+      },
+      matches,
+      unmatchedFollowup,
+    };
+  }
+
+  function validateProject(project) {
+    const errors = [];
+    if (!project || typeof project !== 'object') errors.push('Project file is not valid JSON.');
+    if (!project?.name || typeof project.name !== 'string') errors.push('Workspace name is missing.');
+    if (!Array.isArray(project?.series)) errors.push('Meeting series are missing.');
+    if (project?.series?.some(item => !item.title || !Number.isFinite(Number(item.durationMinutes)))) errors.push('One or more meeting series are invalid.');
+    return errors;
   }
 
   function parseCSV(text) {
@@ -190,11 +279,15 @@
     seriesCost,
     savings,
     reviewStatus,
-    opportunityScore,
+    opportunityReasons,
     recommendation,
     workspaceMetrics,
     normalizeSeries,
     parseCSV,
+    normalizeText,
+    matchFollowupSeries,
+    applyFollowup,
+    validateProject,
     validateDecision,
     round,
   };

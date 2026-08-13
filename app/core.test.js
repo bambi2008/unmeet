@@ -45,3 +45,49 @@ test('rejects a reduction that does not improve the baseline', () => {
   const errors = Core.validateDecision(series, { action: 'shorten', owner: 'Maya', effectiveDate: '2026-08-01', reviewDate: '2026-09-01', targetDuration: 60 });
   assert.ok(errors.some(error => error.includes('shorter')));
 });
+
+test('matches follow-up rows by normalized title and owner', () => {
+  const baseline = { ...series, id: 'base', owner: 'Maya Chen' };
+  const followup = [{ ...series, id: 'follow', title: ' weekly-sync ', owner: 'MAYA CHEN' }];
+  const match = Core.matchFollowupSeries(baseline, followup);
+  assert.equal(match.confidence, 'high');
+  assert.equal(match.row.id, 'follow');
+});
+
+test('applies follow-up values and reports verified savings', () => {
+  const workspace = { hourlyRate: 75, series: [{ ...series, id: 'base', owner: 'Maya', decision: { action: 'shorten', targetDuration: 30 } }] };
+  const result = Core.applyFollowup(workspace, [{ ...series, id: 'follow', owner: 'Maya', durationMinutes: 45 }], '2026-09-01');
+  assert.equal(result.summary.matched, 1);
+  assert.equal(result.workspace.series[0].actual.durationMinutes, 45);
+  assert.equal(Core.savings(result.workspace.series[0], 'actual'), 10);
+});
+
+test('verifies an expected absence for canceled meetings', () => {
+  const workspace = { series: [{ ...series, id: 'base', owner: 'Maya', decision: { action: 'cancel' } }] };
+  const result = Core.applyFollowup(workspace, [], '2026-09-01');
+  assert.equal(result.summary.verifiedAbsent, 1);
+  assert.equal(Core.monthlyPersonHours(result.workspace.series[0], 'actual'), 0);
+});
+
+test('does not guess when multiple follow-up titles match', () => {
+  const baseline = { ...series, id: 'base', owner: 'Unknown' };
+  const rows = [{ ...series, id: 'a', owner: 'A' }, { ...series, id: 'b', owner: 'B' }];
+  const match = Core.matchFollowupSeries(baseline, rows);
+  assert.equal(match.confidence, 'ambiguous');
+  assert.equal(match.row, null);
+});
+
+test('validates restorable project files', () => {
+  assert.deepEqual(Core.validateProject({ name: 'Acme', series: [series] }), []);
+  assert.ok(Core.validateProject({ name: '', series: [] }).length > 0);
+});
+
+test('reports meeting growth and net current load', () => {
+  const workspace = { hourlyRate: 75, series: [{ ...series, actual: { durationMinutes: 90, attendeeCount: 10, occurrencesPerMonth: 4 }, decision: { action: 'keep' } }] };
+  const metrics = Core.workspaceMetrics(workspace);
+  assert.equal(metrics.baselineHours, 40);
+  assert.equal(metrics.currentHours, 60);
+  assert.equal(metrics.increasedHours, 20);
+  assert.equal(metrics.verifiedNetChange, -20);
+  assert.equal(metrics.verifiedSavings, 0);
+});

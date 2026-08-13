@@ -19,14 +19,14 @@
     </nav>
     <div class="sidebar-foot">
       <div class="privacy-note"><span>●</span><div><strong>Metadata only</strong><small>No recordings or meeting content</small></div></div>
-      <button class="text-button" id="reset-demo">Reset demo data</button>
+      <button class="text-button" id="load-sample">Load sample project</button>
     </div>
   </aside>
 
   <main>
     <header class="topbar">
       <div><p class="eyebrow">30-day Meeting Reset</p><h1 id="page-title">Meeting portfolio</h1></div>
-      <div class="top-actions"><span class="period" id="period-label">Jul 1 – Jul 31, 2026</span><button class="secondary" id="export-report">Export report</button><button class="primary" data-open-import>Import calendar CSV</button></div>
+      <div class="top-actions"><span class="period" id="period-label">Jul 1 – Jul 31, 2026</span><button class="secondary" id="print-report">Print report</button><button class="secondary" id="export-project">Save project</button><button class="primary" data-open-import="baseline">Import baseline</button></div>
     </header>
 
     <section id="view-portfolio" class="view active">
@@ -48,18 +48,21 @@
 
     <section id="view-results" class="view">
       <div class="summary-grid" id="results-summary"></div>
+      <div id="verification-summary"></div>
       <div class="results-grid">
         <section class="panel"><div class="panel-head"><div><p class="eyebrow">Portfolio change</p><h2>Baseline vs. current</h2></div></div><div id="comparison-chart" class="comparison-chart"></div></section>
         <section class="panel"><div class="panel-head"><div><p class="eyebrow">Integrity</p><h2>What counts as saved</h2></div></div><div class="definition-list"><div><span class="dot potential"></span><div><strong>Potential</strong><p>An identified opportunity. Never reported as a result.</p></div></div><div><span class="dot planned"></span><div><strong>Planned</strong><p>An owner approved a change with an effective date.</p></div></div><div><span class="dot verified"></span><div><strong>Verified</strong><p>The new pattern appeared in calendar metadata.</p></div></div></div></section>
       </div>
-      <section class="panel"><div class="panel-head"><div><p class="eyebrow">Evidence ledger</p><h2>Verified changes</h2></div></div><div class="table-wrap"><table><thead><tr><th>Meeting</th><th>Decision</th><th>Baseline</th><th>Current</th><th>Verified savings</th></tr></thead><tbody id="verified-body"></tbody></table></div></section>
+      <section class="panel"><div class="panel-head"><div><p class="eyebrow">Evidence ledger</p><h2>Verified changes</h2></div><button class="secondary" id="export-report">Export audit JSON</button></div><div class="table-wrap"><table><thead><tr><th>Meeting</th><th>Decision</th><th>Baseline</th><th>Current</th><th>Verified savings</th></tr></thead><tbody id="verified-body"></tbody></table></div></section>
     </section>
 
     <section id="view-setup" class="view">
       <div class="setup-grid">
-        <section class="panel setup-card"><p class="eyebrow">Calendar data</p><h2>Import a portfolio</h2><p>Use a CSV export to run the first Meeting Reset without configuring OAuth. Data stays in this browser.</p><button class="primary" data-open-import>Import CSV</button><button class="secondary" id="download-template">Download template</button></section>
+        <section class="panel setup-card"><p class="eyebrow">Step 1 · Baseline</p><h2>Import the starting portfolio</h2><p>Import one row per recurring series. This establishes the immutable comparison baseline.</p><button class="primary" data-open-import="baseline">Import baseline CSV</button><button class="secondary" id="download-template">Download template</button></section>
+        <section class="panel setup-card"><p class="eyebrow">Step 2 · Verification</p><h2>Import the follow-up period</h2><p>After decisions take effect, import the next period. UnMeet matches series and calculates observed changes.</p><button class="primary" data-open-import="followup">Import follow-up CSV</button><p class="muted" id="followup-status">No follow-up period imported.</p></section>
         <section class="panel setup-card"><p class="eyebrow">Coverage</p><h2><span id="coverage-value">86%</span> of target team</h2><p>Results are directional until at least 70% of the selected team is represented.</p><div class="meter"><span id="coverage-meter"></span></div></section>
-        <section class="panel setup-card"><p class="eyebrow">Privacy defaults</p><h2>Designed against surveillance</h2><ul class="check-list"><li>No audio, video, transcript, or description</li><li>No individual productivity scores</li><li>Meeting titles can be removed before import</li><li>Workspace data can be deleted instantly</li></ul></section>
+        <section class="panel setup-card"><p class="eyebrow">Project file</p><h2>Move or restore this project</h2><p>Save the complete baseline, decisions, evidence and settings to one portable JSON file.</p><button class="primary" id="export-project-setup">Save project</button><button class="secondary" id="import-project">Open project</button><input class="hidden" id="project-file" type="file" accept=".json,application/json"></section>
+        <section class="panel setup-card"><p class="eyebrow">Privacy defaults</p><h2>Designed against surveillance</h2><ul class="check-list"><li>No audio, video, transcript, or description</li><li>No individual productivity scores</li><li>Meeting titles can be removed before import</li><li>Workspace data can be deleted instantly</li></ul><button class="secondary danger" id="delete-workspace">Delete local workspace</button></section>
         <section class="panel setup-card"><p class="eyebrow">Cost model</p><h2>Transparent assumptions</h2><label class="field-label">Blended hourly cost<input id="hourly-rate" type="number" min="1" max="1000" value="75"></label><label class="field-label">Workspace name<input id="workspace-name" type="text" value="Northstar Product & Engineering"></label><button class="primary" id="save-workspace">Save assumptions</button></section>
       </div>
     </section>
@@ -84,8 +87,9 @@
 
   <div class="modal-backdrop hidden" id="import-modal" role="presentation">
     <section class="modal small" role="dialog" aria-modal="true" aria-labelledby="import-title">
-      <div class="modal-head"><div><p class="eyebrow">Calendar portfolio</p><h2 id="import-title">Import CSV</h2></div><button class="icon-button" data-close-import aria-label="Close">×</button></div>
-      <p class="muted">Required columns: <code>title</code>, <code>owner</code>, <code>duration_minutes</code>, <code>attendee_count</code>, and <code>occurrences_per_month</code>.</p>
+      <div class="modal-head"><div><p class="eyebrow" id="import-eyebrow">Calendar portfolio</p><h2 id="import-title">Import baseline CSV</h2></div><button class="icon-button" data-close-import aria-label="Close">×</button></div>
+      <p class="muted" id="import-help">Required columns: <code>title</code>, <code>owner</code>, <code>duration_minutes</code>, <code>attendee_count</code>, and <code>occurrences_per_month</code>.</p>
+      <label class="field-label" id="import-period-label">Baseline period label<input id="import-period" type="text" placeholder="Jul 1 – Jul 31, 2026"></label>
       <label class="drop-zone" for="csv-file"><strong>Choose a CSV file</strong><span>or drag it here</span><input id="csv-file" type="file" accept=".csv,text/csv"></label>
       <p class="form-error" id="import-error" role="alert"></p>
       <div class="modal-actions"><button class="secondary" data-close-import>Cancel</button></div>

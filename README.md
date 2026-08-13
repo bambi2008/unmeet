@@ -22,9 +22,11 @@ persistence.
 node --test app/core.test.js
 ```
 
-The MVP is a working workflow demonstrator. Google Workspace OAuth,
-multi-tenant authentication, billing, and server-side audit logs are still to
-be implemented before production use.
+The app is a working single-user local tool: it accepts baseline and follow-up
+periods, automatically matches recurring series, verifies observed changes,
+prints management reports, and saves/restores complete project files. Google
+Workspace OAuth, multi-tenant collaboration, billing, and server-side audit
+logs remain outside this local release.
 
 ## Prototype capabilities
 

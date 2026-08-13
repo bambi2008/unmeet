@@ -57,6 +57,7 @@ h2 { margin-bottom: 0; font-family: Georgia, serif; font-size: 23px; font-weight
 .primary:hover { background: #0d4c32; }
 .secondary { border: 1px solid #ccd7ce; color: var(--ink); background: white; }
 .secondary:hover { background: #f7faf7; border-color: #aebeb1; }
+.secondary.danger { margin-top: 18px; color: #a33a32; border-color: #dcb8b4; }
 
 .view { display: none; padding: 28px 32px 48px; }
 .view.active { display: block; }
@@ -147,6 +148,10 @@ tbody tr:hover { background: #fbfcfa; }
 .dot.planned { background: #6b91c1; }
 .dot.verified { background: var(--green-2); }
 .positive { color: var(--green); font-weight: 800; }
+.negative { color: #a33a32; font-weight: 800; }
+.verification-banner { display: flex; justify-content: space-between; gap: 18px; margin-top: 14px; padding: 14px 18px; border: 1px solid var(--line); border-radius: 11px; background: #eef3ed; }
+.verification-banner strong { font-size: 12px; }
+.verification-banner span { color: var(--muted); font-size: 11px; }
 
 .setup-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .setup-card { min-height: 245px; padding: 22px; }
@@ -220,4 +225,13 @@ code { padding: 2px 4px; border-radius: 4px; color: var(--green); background: #e
   .search { flex: 1; width: auto; }
   .baseline-strip { grid-template-columns: 1fr 1fr; }
   .action-grid, .form-grid { grid-template-columns: 1fr 1fr; }
+}
+
+@media print {
+  .sidebar, .top-actions, #view-portfolio, #view-reviews, #view-setup, .row-button { display: none !important; }
+  main { margin: 0; }
+  .topbar { position: static; padding: 20px 0; background: white; }
+  #view-results { display: block !important; padding: 0; }
+  body { background: white; }
+  .panel, .summary-card { break-inside: avoid; box-shadow: none; }
 }

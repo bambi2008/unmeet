@@ -1,18 +1,21 @@
 const Core = window.UnMeetCore;
-const STORAGE_KEY = 'unmeet-commercial-mvp-v1';
+const STORAGE_KEY = 'unmeet-local-tool-v2';
+const LEGACY_STORAGE_KEY = 'unmeet-commercial-mvp-v1';
 let workspace = loadWorkspace();
 let currentView = 'portfolio';
 let activeSeriesId = null;
+let importMode = 'baseline';
 
 function clone(value) { return JSON.parse(JSON.stringify(value)); }
 function loadWorkspace() {
   try {
-    const saved = localStorage.getItem(STORAGE_KEY);
+    const saved = localStorage.getItem(STORAGE_KEY) || localStorage.getItem(LEGACY_STORAGE_KEY);
     if (saved) return JSON.parse(saved);
   } catch (_) {}
   return clone(window.UNMEET_SAMPLE);
 }
 function saveWorkspace() { localStorage.setItem(STORAGE_KEY, JSON.stringify(workspace)); }
+function emptyWorkspace() { return { name: 'New Meeting Reset', coverage: 0, people: 0, hourlyRate: 75, period: 'No baseline imported', createdAt: new Date().toISOString(), series: [] }; }
 function money(value) { return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(value); }
 function hours(value) { return `${Core.round(value, 1).toLocaleString()}h`; }
 function escapeHtml(value) { const div = document.createElement('div'); div.textContent = String(value ?? ''); return div.innerHTML; }
@@ -57,14 +60,15 @@ function renderPortfolioRows() {
   const rows = workspace.series
     .filter(item => !search || `${item.title} ${item.owner} ${item.team}`.toLowerCase().includes(search))
     .filter(item => filter === 'all' || Core.reviewStatus(item) === filter)
-    .sort((a, b) => Core.opportunityScore(b) - Core.opportunityScore(a));
+    .sort((a, b) => Core.monthlyPersonHours(b) - Core.monthlyPersonHours(a));
   const body = document.getElementById('portfolio-body');
   if (!rows.length) { body.innerHTML = '<tr><td colspan="6" class="empty-state">No meeting series match this filter.</td></tr>'; return; }
   body.innerHTML = rows.map(item => {
     const status = Core.reviewStatus(item);
     const rec = Core.recommendation(item);
     const decided = item.decision ? Core.ACTIONS[item.decision.action].label : rec.text;
-    return `<tr><td class="meeting-cell"><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(item.team)} · ${item.durationMinutes} min × ${item.attendeeCount} people × ${item.occurrencesPerMonth}/mo</small></td><td><span class="load-value">${hours(Core.monthlyPersonHours(item))}<small>${money(Core.seriesCost(item, workspace.hourlyRate))}/mo</small></span></td><td>${escapeHtml(item.owner)}</td><td><span class="status ${status}">${statusLabel(status)}</span></td><td class="opportunity"><strong>${escapeHtml(decided)}</strong><small>Score ${Core.opportunityScore(item)}</small></td><td><button class="row-button" data-review-id="${escapeHtml(item.id)}">${item.decision ? 'Edit' : 'Review'}</button></td></tr>`;
+    const reasons = Core.opportunityReasons(item).slice(0, 3).join(' · ');
+    return `<tr><td class="meeting-cell"><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(item.team)} · ${item.durationMinutes} min × ${item.attendeeCount} people × ${item.occurrencesPerMonth}/mo</small></td><td><span class="load-value">${hours(Core.monthlyPersonHours(item))}<small>${money(Core.seriesCost(item, workspace.hourlyRate))}/mo</small></span></td><td>${escapeHtml(item.owner)}</td><td><span class="status ${status}">${statusLabel(status)}</span></td><td class="opportunity"><strong>${escapeHtml(decided)}</strong><small>${escapeHtml(reasons)}</small></td><td><button class="row-button" data-review-id="${escapeHtml(item.id)}">${item.decision ? 'Edit' : 'Review'}</button></td></tr>`;
   }).join('');
 }
 
@@ -88,17 +92,23 @@ function reviewCard(item) {
 
 function renderResults() {
   const metrics = Core.workspaceMetrics(workspace);
-  const actualHours = Core.round(metrics.baselineHours - metrics.verifiedSavings, 1);
+  const actualHours = metrics.currentHours;
   document.getElementById('results-summary').innerHTML = [
-    summaryCard('Verified recovery', hours(metrics.verifiedSavings), `${money(metrics.verifiedSavingsCost)} per month`, true),
-    summaryCard('Annualized capacity', hours(metrics.verifiedSavings * 12), `${money(metrics.verifiedSavingsCost * 12)} annualized`),
+    summaryCard('Verified recovery', hours(metrics.verifiedSavings), metrics.increasedHours ? `${hours(metrics.increasedHours)} of growth reported separately` : `${money(metrics.verifiedSavingsCost)} per month`, true),
+    summaryCard('Net annualized change', hours(metrics.verifiedNetChange * 12), `${money(metrics.verifiedNetChangeCost * 12)} net annualized`),
     summaryCard('Verified changes', `${metrics.verified}`, `${metrics.decided - metrics.verified} waiting for evidence`),
     summaryCard('Portfolio change rate', `${metrics.changeRate}%`, 'of owner decisions changed a meeting'),
   ].join('');
-  const max = Math.max(metrics.baselineHours, 1);
-  document.getElementById('comparison-chart').innerHTML = `<div class="bar-row"><label>Baseline</label><div class="bar-track"><span class="bar-fill" style="width:100%"></span></div><strong>${hours(metrics.baselineHours)}</strong></div><div class="bar-row"><label>Current</label><div class="bar-track"><span class="bar-fill current" style="width:${actualHours / max * 100}%"></span></div><strong>${hours(actualHours)}</strong></div><p class="muted">Current only reflects changes verified in calendar metadata; planned changes are excluded.</p>`;
+  const max = Math.max(metrics.baselineHours, actualHours, 1);
+  document.getElementById('comparison-chart').innerHTML = `<div class="bar-row"><label>Baseline</label><div class="bar-track"><span class="bar-fill" style="width:${metrics.baselineHours / max * 100}%"></span></div><strong>${hours(metrics.baselineHours)}</strong></div><div class="bar-row"><label>Current</label><div class="bar-track"><span class="bar-fill current" style="width:${actualHours / max * 100}%"></span></div><strong>${hours(actualHours)}</strong></div><p class="muted">Current reflects all matched follow-up values. ${metrics.increasedHours ? `${hours(metrics.increasedHours)} of increased meeting load is included.` : 'No increased meeting load was observed.'} Planned changes are excluded.</p>`;
   const verified = workspace.series.filter(item => item.actual && item.decision);
-  document.getElementById('verified-body').innerHTML = verified.length ? verified.map(item => `<tr><td class="meeting-cell"><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(item.owner)}</small></td><td>${escapeHtml(Core.ACTIONS[item.decision.action].label)}</td><td>${hours(Core.monthlyPersonHours(item))}</td><td>${hours(Core.monthlyPersonHours(item, 'actual'))}</td><td class="positive">${hours(Core.savings(item, 'actual'))} · ${money(Core.savings(item, 'actual') * workspace.hourlyRate)}</td></tr>`).join('') : '<tr><td colspan="5" class="empty-state">No changes have been verified yet.</td></tr>';
+  document.getElementById('verified-body').innerHTML = verified.length ? verified.map(item => {
+    const delta = Core.round(Core.monthlyPersonHours(item) - Core.monthlyPersonHours(item, 'actual'), 1);
+    const result = delta >= 0 ? `${hours(delta)} · ${money(delta * workspace.hourlyRate)}` : `+${hours(Math.abs(delta))} · +${money(Math.abs(delta) * workspace.hourlyRate)}`;
+    return `<tr><td class="meeting-cell"><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(item.owner)} · ${escapeHtml(item.actual.confidence || 'existing')} confidence</small></td><td>${escapeHtml(Core.ACTIONS[item.decision.action].label)}</td><td>${hours(Core.monthlyPersonHours(item))}</td><td>${hours(Core.monthlyPersonHours(item, 'actual'))}</td><td class="${delta >= 0 ? 'positive' : 'negative'}">${result}</td></tr>`;
+  }).join('') : '<tr><td colspan="5" class="empty-state">No changes have been verified yet. Import a follow-up period after decisions take effect.</td></tr>';
+  const verification = workspace.lastVerification;
+  document.getElementById('verification-summary').innerHTML = verification ? `<div class="verification-banner"><strong>Follow-up imported ${escapeHtml(formatDate(verification.measuredAt))}</strong><span>${verification.matched} matched · ${verification.verifiedAbsent} expected absences · ${verification.missing} missing · ${verification.ambiguous} ambiguous · ${verification.unmatchedFollowup} new/unmatched</span></div>` : '';
 }
 
 function renderSetup() {
@@ -106,6 +116,7 @@ function renderSetup() {
   document.getElementById('coverage-meter').style.width = `${Math.min(workspace.coverage || 0, 100)}%`;
   document.getElementById('hourly-rate').value = workspace.hourlyRate;
   document.getElementById('workspace-name').value = workspace.name;
+  document.getElementById('followup-status').textContent = workspace.followup ? `Last follow-up: ${formatDate(workspace.followup.measuredAt)} · ${workspace.followup.rowCount} rows` : 'No follow-up period imported.';
 }
 
 function navigate(view) {
@@ -167,7 +178,22 @@ function updateImpactPreview() {
 }
 
 function closeDecision() { document.getElementById('decision-modal').classList.add('hidden'); activeSeriesId = null; }
-function openImport() { document.getElementById('import-error').textContent = ''; document.getElementById('csv-file').value = ''; document.getElementById('import-modal').classList.remove('hidden'); }
+function openImport(mode = 'baseline') {
+  importMode = mode;
+  document.getElementById('import-error').textContent = '';
+  document.getElementById('csv-file').value = '';
+  document.getElementById('import-title').textContent = mode === 'followup' ? 'Import follow-up CSV' : 'Import baseline CSV';
+  document.getElementById('import-eyebrow').textContent = mode === 'followup' ? 'Verification period' : 'Starting portfolio';
+  document.getElementById('import-help').innerHTML = mode === 'followup'
+    ? 'Use the same columns as the baseline. Series are matched by normalized <code>title</code> and <code>owner</code>; ambiguous matches are never guessed.'
+    : 'Required columns: <code>title</code>, <code>owner</code>, <code>duration_minutes</code>, <code>attendee_count</code>, and <code>occurrences_per_month</code>.';
+  document.getElementById('import-period-label').childNodes[0].textContent = mode === 'followup' ? 'Follow-up period end date' : 'Baseline period label';
+  const periodInput = document.getElementById('import-period');
+  periodInput.type = mode === 'followup' ? 'date' : 'text';
+  periodInput.value = mode === 'followup' ? new Date().toISOString().slice(0, 10) : '';
+  periodInput.placeholder = mode === 'followup' ? '' : 'Jul 1 – Jul 31, 2026';
+  document.getElementById('import-modal').classList.remove('hidden');
+}
 function closeImport() { document.getElementById('import-modal').classList.add('hidden'); }
 
 function submitDecision(event) {
@@ -191,10 +217,23 @@ function importCSV(file) {
   reader.onload = () => {
     const rows = Core.parseCSV(reader.result);
     if (!rows.length) { document.getElementById('import-error').textContent = 'No valid meeting rows found. Check the template and try again.'; return; }
-    workspace.series = rows;
-    workspace.period = 'Imported baseline';
-    saveWorkspace(); closeImport(); render(); navigate('portfolio');
-    toast(`${rows.length} recurring meeting series imported.`);
+    if (importMode === 'followup') {
+      if (!workspace.series.length) { document.getElementById('import-error').textContent = 'Import a baseline before importing a follow-up period.'; return; }
+      const measuredAt = document.getElementById('import-period').value || new Date().toISOString().slice(0, 10);
+      const result = Core.applyFollowup(workspace, rows, measuredAt);
+      workspace = result.workspace;
+      workspace.lastVerification = result.summary;
+      workspace.lastVerification.measuredAt = workspace.followup.measuredAt;
+      saveWorkspace(); closeImport(); render(); navigate('results');
+      toast(`Follow-up complete: ${result.summary.matched + result.summary.verifiedAbsent} series verified; ${result.summary.missing + result.summary.ambiguous} need review.`);
+    } else {
+      if (workspace.series.length && !confirm('Replace the current baseline and all of its decisions? Export the project first if you need a backup.')) return;
+      const existingName = workspace.name;
+      const period = document.getElementById('import-period').value.trim() || `Baseline imported ${new Date().toLocaleDateString()}`;
+      workspace = { ...emptyWorkspace(), name: existingName || 'New Meeting Reset', coverage: workspace.coverage || 0, hourlyRate: workspace.hourlyRate || 75, period, series: rows, baselineImportedAt: new Date().toISOString() };
+      saveWorkspace(); closeImport(); render(); navigate('portfolio');
+      toast(`${rows.length} recurring meeting series imported as the baseline.`);
+    }
   };
   reader.onerror = () => { document.getElementById('import-error').textContent = 'The file could not be read.'; };
   reader.readAsText(file);
@@ -212,12 +251,34 @@ function exportReport() {
   toast('Audit report exported.');
 }
 
+function exportProject() {
+  const project = { ...workspace, format: 'unmeet-project', version: 2, exportedAt: new Date().toISOString() };
+  download(`unmeet-project-${new Date().toISOString().slice(0,10)}.json`, JSON.stringify(project, null, 2), 'application/json');
+  toast('Complete project file saved.');
+}
+
+function importProject(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const project = JSON.parse(reader.result);
+      const errors = Core.validateProject(project);
+      if (errors.length) throw new Error(errors.join(' '));
+      workspace = project;
+      saveWorkspace(); render(); navigate('portfolio');
+      toast(`Project “${workspace.name}” opened.`);
+    } catch (error) { toast(`Project could not be opened: ${error.message}`); }
+  };
+  reader.readAsText(file);
+}
+
 function toast(message) { const el = document.getElementById('toast'); el.textContent = message; el.classList.remove('hidden'); clearTimeout(toast.timer); toast.timer = setTimeout(() => el.classList.add('hidden'), 3200); }
 
 document.addEventListener('DOMContentLoaded', () => {
   render();
   document.querySelectorAll('.nav-item').forEach(button => button.addEventListener('click', () => navigate(button.dataset.view)));
-  document.querySelectorAll('[data-open-import]').forEach(button => button.addEventListener('click', openImport));
+  document.querySelectorAll('[data-open-import]').forEach(button => button.addEventListener('click', () => openImport(button.dataset.openImport || 'baseline')));
   document.querySelectorAll('[data-close-import]').forEach(button => button.addEventListener('click', closeImport));
   document.querySelectorAll('[data-close-modal]').forEach(button => button.addEventListener('click', closeDecision));
   document.getElementById('search-input').addEventListener('input', renderPortfolioRows);
@@ -227,9 +288,15 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('decision-form').addEventListener('input', updateImpactPreview);
   document.getElementById('csv-file').addEventListener('change', event => importCSV(event.target.files[0]));
   document.getElementById('export-report').addEventListener('click', exportReport);
+  document.getElementById('print-report').addEventListener('click', () => { navigate('results'); setTimeout(() => window.print(), 50); });
+  document.getElementById('export-project').addEventListener('click', exportProject);
+  document.getElementById('export-project-setup').addEventListener('click', exportProject);
+  document.getElementById('import-project').addEventListener('click', () => document.getElementById('project-file').click());
+  document.getElementById('project-file').addEventListener('change', event => importProject(event.target.files[0]));
   document.getElementById('download-template').addEventListener('click', () => download('unmeet-calendar-template.csv', 'title,owner,team,duration_minutes,attendee_count,occurrences_per_month,has_agenda,age_months\nWeekly Product Sync,Maya Chen,Product,60,18,4,true,12\n'));
   document.getElementById('save-workspace').addEventListener('click', () => { workspace.hourlyRate = Number(document.getElementById('hourly-rate').value) || 75; workspace.name = document.getElementById('workspace-name').value.trim() || 'My Workspace'; saveWorkspace(); render(); toast('Workspace assumptions saved.'); });
-  document.getElementById('reset-demo').addEventListener('click', () => { if (confirm('Reset all local changes and restore the sample workspace?')) { workspace = clone(window.UNMEET_SAMPLE); saveWorkspace(); render(); navigate('portfolio'); toast('Sample workspace restored.'); } });
+  document.getElementById('load-sample').addEventListener('click', () => { if (confirm('Replace the current local workspace with the sample project? Export your project first if needed.')) { workspace = clone(window.UNMEET_SAMPLE); saveWorkspace(); render(); navigate('portfolio'); toast('Sample project loaded.'); } });
+  document.getElementById('delete-workspace').addEventListener('click', () => { if (confirm('Permanently delete this workspace from this browser? Export it first if you need a backup.')) { localStorage.removeItem(STORAGE_KEY); localStorage.removeItem(LEGACY_STORAGE_KEY); workspace = emptyWorkspace(); saveWorkspace(); render(); navigate('setup'); toast('Local workspace deleted.'); } });
   document.addEventListener('click', event => { const button = event.target.closest('[data-review-id]'); if (button) openDecision(button.dataset.reviewId); });
   document.addEventListener('keydown', event => { if (event.key === 'Escape') { closeDecision(); closeImport(); } });
 });
