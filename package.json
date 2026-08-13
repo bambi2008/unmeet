@@ -1,0 +1,12 @@
+{
+  "name": "unmeet",
+  "version": "0.4.0",
+  "private": true,
+  "scripts": {
+    "start": "node team/server.js",
+    "test": "node --test app/core.test.js team/*.test.js team/connectors/*.test.js",
+    "check": "node --check team/server.js && node --check team/saas-db.js && node --check team/public/app.js && npm test",
+    "backup": "node scripts/backup.js",
+    "restore:check": "node scripts/restore-check.js"
+  }
+}

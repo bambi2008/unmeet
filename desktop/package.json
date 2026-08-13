@@ -20,6 +20,7 @@
       "tracker.js",
       "classifier.js",
       "workspace.js",
+      "calendar.js",
       "renderer/**/*",
       "assets/**/*",
       "node_modules/**/*"

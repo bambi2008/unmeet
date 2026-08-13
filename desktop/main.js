@@ -5,7 +5,6 @@ const { Tracker } = require('./tracker');
 const { MeetingClassifier } = require('./classifier');
 const { Workspace } = require('./workspace');
 const { CalendarService } = require('./calendar');
-const { AudioEngine } = require('./audio');
 
 let tray = null;
 let dashboardWindow = null;
@@ -13,7 +12,6 @@ let tracker = null;
 let classifier = null;
 let workspace = null;
 let calendar = null;
-let audio = null;
 
 // ── App lifecycle ──
 app.whenReady().then(() => {
@@ -21,34 +19,24 @@ app.whenReady().then(() => {
   classifier = new MeetingClassifier();
   workspace = new Workspace();
   calendar = new CalendarService();
-  audio = new AudioEngine();
   createTray();
   tracker.start();
 
-  // Meeting ended → rating + stop audio + match calendar
-  tracker.on('meetingEnded', async (entry) => {
+  // Meeting ended → rating + optional calendar metadata matching.
+  // UnMeet does not record or transcribe meeting audio.
+  tracker.on('meetingEnded', (entry) => {
     showRatingNotification(entry);
-    audio.stopRecording();
-    // Match with calendar event for title
     const calMatch = calendar.matchMeeting(entry);
     if (calMatch) {
       entry.calendarTitle = calMatch.title;
       entry.attendees = calMatch.attendees;
       entry.hasAgenda = calMatch.hasAgenda;
-    }
-    // Run audio pipeline if recording was active
-    if (audio.currentFilePath) {
-      const analysis = await audio.runFullPipeline(entry.id, entry.calendarTitle || '');
-      if (analysis) {
-        entry.analysis = analysis;
-      }
+      tracker._save();
     }
   });
 
-  // Meeting started → start audio recording
-  tracker.on('meetingStarted', (entry) => {
-    audio.startRecording(entry.id);
-    // Refresh calendar events for matching
+  // Refresh calendar metadata for matching. No meeting content is captured.
+  tracker.on('meetingStarted', () => {
     calendar.fetchEvents().catch(() => {});
   });
 
@@ -71,11 +59,6 @@ app.whenReady().then(() => {
   ipcMain.handle('disconnect-calendar', () => { calendar.disconnect(); return true; });
   ipcMain.handle('get-calendar-status', () => ({ connected: calendar.connected }));
   ipcMain.handle('get-upcoming-events', () => calendar.getUpcomingEvents());
-  ipcMain.handle('get-meeting-analysis', (_, meetingId) => {
-    const p = require('path').join(require('os').homedir(), 'AppData', 'Local', 'UnMeet', `analysis-${meetingId}.json`);
-    const fs = require('fs');
-    return fs.existsSync(p) ? JSON.parse(fs.readFileSync(p, 'utf8')) : null;
-  });
 });
 
 app.on('window-all-closed', (e) => {
@@ -149,7 +132,7 @@ function updateTrayMenu() {
       click: () => openDashboard()
     },
     {
-      label: `This week: ${state.weekHours}h`,
+      label: `This week: ${state.thisWeek.hours}h`,
       enabled: false
     },
     { type: 'separator' },

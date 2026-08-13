@@ -1,0 +1,7 @@
+{
+  "meeting_info_list": [
+    {"meeting_id":"tm-1001-a","recurring_id":"tm-weekly-product","subject":"Weekly Product Sync","owner":"Maya Chen","owner_email":"maya@example.com","department":"Product","start_time":1786377600,"end_time":1786381200,"participant_count":14},
+    {"meeting_id":"tm-1001-b","recurring_id":"tm-weekly-product","subject":"Weekly Product Sync","owner":"Maya Chen","owner_email":"maya@example.com","department":"Product","start_time":1786982400,"end_time":1786985100,"participant_count":12},
+    {"meeting_id":"tm-2001","subject":"Platform Review","owner":"Avery King","owner_email":"avery@example.com","department":"Engineering","duration_minutes":45,"online_member_num":9}
+  ]
+}
