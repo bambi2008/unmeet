@@ -7,9 +7,24 @@ It uses calendar metadata to help teams review recurring meetings, record
 decisions to shorten or cancel them, and measure the meeting hours actually
 recovered.
 
-The repository also contains earlier Chrome extension and Electron prototypes.
-They are not production-ready and do not yet implement the current product
-definition.
+The repository now includes a browser-based commercial MVP that demonstrates
+the complete Meeting Reset workflow. Earlier Chrome extension and Electron
+prototypes remain for reference but are not the current product surface.
+
+## Try the commercial MVP
+
+Open [`app/index.html`](./app/index.html) in a browser. The sample workspace
+supports portfolio ranking, owner decisions, planned-savings previews,
+verified-savings reporting, CSV import, report export, and browser-local
+persistence.
+
+```bash
+node --test app/core.test.js
+```
+
+The MVP is a working workflow demonstrator. Google Workspace OAuth,
+multi-tenant authentication, billing, and server-side audit logs are still to
+be implemented before production use.
 
 ## Prototype capabilities
 
@@ -59,6 +74,12 @@ and employee scoring are outside the initial scope.
 unmeet/
 ├── landing/           # Landing page + waitlist
 │   └── index.html
+├── app/               # Commercial Meeting Reset MVP
+│   ├── index.html
+│   ├── app.js
+│   ├── core.js
+│   ├── core.test.js
+│   └── styles.css
 ├── extension/         # Chrome extension (Manifest V3)
 │   ├── manifest.json
 │   ├── background.js  # Service worker — time tracking engine

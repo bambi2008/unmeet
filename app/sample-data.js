@@ -1,0 +1,21 @@
+window.UNMEET_SAMPLE = {
+  name: 'Northstar Product & Engineering',
+  coverage: 86,
+  people: 74,
+  hourlyRate: 75,
+  period: 'Jul 1 – Jul 31, 2026',
+  series: [
+    { id: 'weekly-product-sync', title: 'Weekly Product Sync', owner: 'Maya Chen', team: 'Product', durationMinutes: 60, attendeeCount: 18, occurrencesPerMonth: 4, hasAgenda: true, ageMonths: 14, reviewStatus: 'review' },
+    { id: 'engineering-all-hands', title: 'Engineering All Hands', owner: 'Jon Bell', team: 'Engineering', durationMinutes: 60, attendeeCount: 42, occurrencesPerMonth: 2, hasAgenda: true, ageMonths: 20, reviewStatus: 'review' },
+    { id: 'daily-platform-standup', title: 'Platform Daily Standup', owner: 'Avery King', team: 'Platform', durationMinutes: 30, attendeeCount: 11, occurrencesPerMonth: 20, hasAgenda: false, ageMonths: 10, reviewStatus: 'review' },
+    { id: 'roadmap-status', title: 'Roadmap Status Review', owner: 'Maya Chen', team: 'Product', durationMinutes: 60, attendeeCount: 13, occurrencesPerMonth: 4, hasAgenda: false, ageMonths: 9, reviewStatus: 'review', decision: { action: 'shorten', owner: 'Maya Chen', targetDuration: 30, effectiveDate: '2026-07-15', reviewDate: '2026-08-15', note: 'Use the pre-read for status; reserve the call for decisions.' }, actual: { durationMinutes: 30, attendeeCount: 13, occurrencesPerMonth: 4, measuredAt: '2026-08-12' } },
+    { id: 'design-critique', title: 'Design Critique', owner: 'Leah Park', team: 'Design', durationMinutes: 60, attendeeCount: 9, occurrencesPerMonth: 4, hasAgenda: true, ageMonths: 16, reviewStatus: 'review', decision: { action: 'keep', owner: 'Leah Park', effectiveDate: '2026-07-18', reviewDate: '2026-10-18', note: 'Strong decision quality; renewed for one quarter.' } },
+    { id: 'growth-metrics', title: 'Growth Metrics Review', owner: 'Owen Reed', team: 'Growth', durationMinutes: 45, attendeeCount: 12, occurrencesPerMonth: 4, hasAgenda: true, ageMonths: 8, reviewStatus: 'review', decision: { action: 'reduce_attendees', owner: 'Owen Reed', targetAttendees: 7, effectiveDate: '2026-07-20', reviewDate: '2026-08-20', note: 'Share notes with optional stakeholders.' }, actual: { durationMinutes: 45, attendeeCount: 8, occurrencesPerMonth: 4, measuredAt: '2026-08-12' } },
+    { id: 'release-readiness', title: 'Release Readiness', owner: 'Priya Shah', team: 'Engineering', durationMinutes: 45, attendeeCount: 16, occurrencesPerMonth: 4, hasAgenda: true, ageMonths: 6, reviewStatus: 'backlog' },
+    { id: 'architecture-forum', title: 'Architecture Forum', owner: 'Jon Bell', team: 'Engineering', durationMinutes: 90, attendeeCount: 14, occurrencesPerMonth: 2, hasAgenda: true, ageMonths: 24, reviewStatus: 'backlog' },
+    { id: 'support-triage', title: 'Support Escalation Triage', owner: 'Nora Webb', team: 'Customer', durationMinutes: 30, attendeeCount: 10, occurrencesPerMonth: 8, hasAgenda: false, ageMonths: 12, reviewStatus: 'backlog' },
+    { id: 'sprint-demo', title: 'Sprint Demo', owner: 'Avery King', team: 'Product & Engineering', durationMinutes: 60, attendeeCount: 28, occurrencesPerMonth: 2, hasAgenda: true, ageMonths: 18, reviewStatus: 'backlog' },
+    { id: 'manager-roundtable', title: 'Manager Roundtable', owner: 'Jon Bell', team: 'Leadership', durationMinutes: 60, attendeeCount: 10, occurrencesPerMonth: 4, hasAgenda: false, ageMonths: 11, reviewStatus: 'backlog' },
+    { id: 'project-atlas-sync', title: 'Project Atlas Sync', owner: 'Priya Shah', team: 'Engineering', durationMinutes: 45, attendeeCount: 8, occurrencesPerMonth: 8, hasAgenda: true, ageMonths: 5, reviewStatus: 'backlog', decision: { action: 'reduce_frequency', owner: 'Priya Shah', targetOccurrences: 4, effectiveDate: '2026-07-22', reviewDate: '2026-08-22', note: 'Keep the second weekly slot only during launch week.' } },
+  ],
+};
